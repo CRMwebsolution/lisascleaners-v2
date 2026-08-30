@@ -21,8 +21,9 @@ export default function PrivacyPage() {
         online payment.
       </p>
       <p className="mt-4">
-        The form asks for your name, phone, email, job address, type of clean, an optional
-        preferred date, optional notes, and your consent to store the request.
+        The form asks for your name, optional email, phone, job address, quote date and time,
+        cleaning schedule and time, type of clean, optional notes, and your consent to store
+        the request.
       </p>
       <p className="mt-4">
         If you want me to delete your information, email{" "}

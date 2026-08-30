@@ -27,10 +27,7 @@ export default function Footer() {
           >
             {PHONE_DISPLAY}
           </a>
-          <a
-            href={`mailto:${EMAIL}`}
-            className="tap mt-1 flex items-center text-sm text-purple-mid"
-          >
+          <a href={`mailto:${EMAIL}`} className="tap mt-1 flex items-center text-sm text-purple-mid">
             {EMAIL}
           </a>
           <Link
@@ -45,24 +42,23 @@ export default function Footer() {
           <ul className="mt-2 space-y-1">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="tap inline-flex items-center text-sm text-ink hover:text-purple-mid"
-                >
+                <Link href={link.href} className="tap inline-flex items-center text-sm text-ink hover:text-purple-mid">
                   {link.label}
                 </Link>
               </li>
             ))}
             <li>
-              <Link
-                href="/privacy"
-                className="tap inline-flex items-center text-sm text-ink hover:text-purple-mid"
-              >
+              <Link href="/privacy" className="tap inline-flex items-center text-sm text-ink hover:text-purple-mid">
                 Privacy
               </Link>
             </li>
           </ul>
         </nav>
+      </div>
+      <div className="mx-auto flex max-w-6xl justify-end px-4 pb-4">
+        <Link href="/login" className="text-purple-mid opacity-20 hover:opacity-60" aria-label="Staff login">
+          ●
+        </Link>
       </div>
     </footer>
   );

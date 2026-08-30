@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
 import JsonLd from "@/components/JsonLd";
+import SiteChrome from "@/components/SiteChrome";
 import { BUSINESS_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -37,9 +36,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} min-h-screen antialiased`}>
         <JsonLd />
-        <Header />
-        {children}
-        <Footer />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );
