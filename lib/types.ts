@@ -2,7 +2,7 @@ export type StaffRole = "admin" | "staff";
 
 export type RequestStatus = "new" | "contacted" | "booked" | "declined";
 
-export type JobStatus = "scheduled" | "completed";
+export type JobStatus = "scheduled" | "completed" | "cancelled";
 
 export interface LisaProfile {
   id: string;
@@ -41,12 +41,12 @@ export interface LisaJob {
   type_of_clean: string;
   price: number | null;
   job_date: string;
-  job_time: string;
+  job_time: string | null;
   status: JobStatus;
   notes: string | null;
-  source_request_id: string | null;
-  created_by: string | null;
-  created_at: string;
+  source_request_id?: string | null;
+  created_by?: string | null;
+  created_at?: string;
 }
 
 export interface JobAssignment {

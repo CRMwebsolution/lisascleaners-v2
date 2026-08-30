@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
-import type { JobWithAssignments, LisaProfile } from "@/lib/types";
+import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile } from "@/lib/types";
 
 export default function StaffDashboard() {
   const router = useRouter();
@@ -14,13 +14,22 @@ export default function StaffDashboard() {
 
   const load = useCallback(async (userId: string) => {
     const supabase = getSupabaseBrowser();
-    const { data } = await supabase
-      .from("lisa_jobs")
-      .select("id, business_id, customer_name, customer_phone, customer_email, address, type_of_clean, job_date, job_time, status, notes, source_request_id, created_by, created_at, job_assignments:lisa_job_assignments(*, profile:lisa_profiles(*))")
-      .order("job_date", { ascending: true });
-    const rows = ((data as JobWithAssignments[]) ?? []).filter((job) =>
-      job.job_assignments?.some((assignment) => assignment.assignee_id === userId),
-    );
+    const [{ data: jobRows }, { data: assignmentRows }, { data: people }] = await Promise.all([
+      supabase.from("lisa_jobs").select("*").order("job_date", { ascending: true }),
+      supabase.from("lisa_job_assignments").select("*"),
+      supabase.from("lisa_profiles").select("*"),
+    ]);
+    const byId = new Map(((people as LisaProfile[]) ?? []).map((person) => [person.id, person]));
+    const grouped = new Map<string, JobAssignment[]>();
+    for (const raw of assignmentRows ?? []) {
+      const row = raw as JobAssignment;
+      const list = grouped.get(row.job_id) ?? [];
+      list.push({ ...row, profile: byId.get(row.assignee_id) ?? null });
+      grouped.set(row.job_id, list);
+    }
+    const rows = ((jobRows as LisaJob[]) ?? [])
+      .map((job) => ({ ...job, job_assignments: grouped.get(job.id) ?? [] }))
+      .filter((job) => job.job_assignments.some((assignment) => assignment.assignee_id === userId));
     setJobs(rows);
   }, []);
 
@@ -94,7 +103,7 @@ export default function StaffDashboard() {
           <li key={job.id} className="rounded-md border border-purple-light bg-white p-4">
             <p className="font-semibold text-purple-dark">{job.customer_name}</p>
             <p className="text-sm">
-              {job.job_date} {job.job_time.slice(0, 5)} · {job.type_of_clean}
+              {job.job_date} {job.job_time ? String(job.job_time).slice(0, 5) : ""} · {job.type_of_clean}
             </p>
             <p className="text-sm">{job.address}</p>
             <p className="text-sm">{job.customer_phone}</p>
