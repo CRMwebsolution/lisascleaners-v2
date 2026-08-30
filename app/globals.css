@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  --purple-dark: #3b0764;
+  --purple-mid: #5b21b6;
+  --purple-light: #ddd6fe;
+  --purple-soft: #f5f3ff;
+  --white: #ffffff;
+  --ink: #2e1065;
+}
+
+@theme inline {
+  --color-purple-dark: var(--purple-dark);
+  --color-purple-mid: var(--purple-mid);
+  --color-purple-light: var(--purple-light);
+  --color-purple-soft: var(--purple-soft);
+  --color-ink: var(--ink);
+  --font-sans: var(--font-geist-sans);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--purple-mid);
+  outline-offset: 2px;
+}
+
+.tap {
+  min-height: 44px;
+  min-width: 44px;
+}
