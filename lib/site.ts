@@ -36,7 +36,34 @@ export const SERVICES = [
   { slug: "vacation-rental", label: "Vacation rental", summary: "Turnover cleaning for vacation rentals." },
 ] as const;
 
-export type TypeOfClean = (typeof SERVICES)[number]["label"];
+export const JOB_SERVICE_TYPES = [
+  "Residential",
+  "Office",
+  "Deep clean",
+  "Move in/out",
+  "Recurring",
+  "Window and floor",
+  "Vacation rental",
+] as const;
+
+export const QUOTE_TIME_OPTIONS = [
+  { value: "morning", label: "Morning (8am - 12pm)" },
+  { value: "afternoon", label: "Afternoon (12pm - 4pm)" },
+  { value: "evening", label: "Evening (4pm - 7pm)" },
+] as const;
+
+export const CLEANING_SCHEDULE_OPTIONS = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "bi-weekly", label: "Bi-weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "other", label: "Other (specify in comments)" },
+] as const;
+
+/** Quote date is limited to Fri–Mon, matching the original form. */
+export const QUOTE_ALLOWED_WEEKDAYS = [0, 1, 5, 6] as const;
+
+export type TypeOfClean = (typeof SERVICES)[number]["label"] | "Other";
 
 export const CTA_LABEL = "Request a Quote";
 
@@ -49,13 +76,20 @@ export const QUOTE_SUCCESS =
 export const QUOTE_ERROR =
   "That didn’t send. Call (252) 659-1868 or email info@lisascleaners.com.";
 
-export const PREFERRED_DATE_HELPER = "This is not a booking.";
+export const PREFERRED_DATE_HELPER =
+  "This is not a booking. Quote dates are Friday, Saturday, Sunday, or Monday.";
 
 export const GALLERY_ALT = "Finished cleaning job photo — to be supplied";
 
 export const SITE_URL = "https://lisascleaners.com";
 
 export const DEFAULT_LISA_BUSINESS_ID = "2ab32295-5f15-4732-ac49-4419fe6d8356";
+
+/** Seed admins only. Roles stay on lisa_profiles so these can be changed in Staff. */
+export const INITIAL_ADMIN_EMAILS = [
+  "cody@southernautomate.com",
+  "nyther1@gmail.com",
+] as const;
 
 export const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -67,5 +101,16 @@ export const NAV_LINKS = [
 ] as const;
 
 export function isTypeOfClean(value: string): value is TypeOfClean {
-  return SERVICES.some((service) => service.label === value);
+  return value === "Other" || SERVICES.some((service) => service.label === value);
+}
+
+export function isAllowedQuoteDate(isoDate: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return false;
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  return (QUOTE_ALLOWED_WEEKDAYS as readonly number[]).includes(date.getDay());
+}
+
+export function isUsPhone(value: string) {
+  return /^\(?\d{3}\)?[\s\-.]?\d{3}[\s\-.]?\d{4}$/.test(value.trim());
 }
