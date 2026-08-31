@@ -27,6 +27,23 @@ function fail(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function explainInsertError(message: string) {
+  const text = message.toLowerCase();
+  if (text.includes("row-level security") || text.includes("rls")) {
+    return "The quote table is locked from public submits. In Supabase SQL run: grant insert on public.lisa_quote_requests to anon, authenticated; then add an insert policy for anon.";
+  }
+  if (text.includes("business_id") || text.includes("foreign key")) {
+    return "The business id on this request doesn’t match the Lisa business row. Check LISA_BUSINESS_ID in .env.local.";
+  }
+  if (text.includes("column") || text.includes("schema cache")) {
+    return `The quote table is missing a column the form needs. ${message}`;
+  }
+  if (text.includes("permission") || text.includes("42501")) {
+    return "The website login key isn’t allowed to write quote requests. Add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart npm run dev.";
+  }
+  return `The request didn’t save: ${message} If that keeps happening, call (252) 659-1868.`;
+}
+
 export async function POST(request: Request) {
   let body: QuoteBody;
   try {
@@ -64,13 +81,13 @@ export async function POST(request: Request) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Missing Supabase env");
     return fail("The quote form is missing its database connection. Call (252) 659-1868 and we’ll take it by phone.", 500);
   }
 
-  const businessId = process.env.LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const businessId = process.env.LISA_BUSINESS_ID || process.env.NEXT_PUBLIC_LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
+  const supabase = createClient(supabaseUrl, serviceKey || supabaseAnonKey);
   const consent_at = new Date().toISOString();
   const fullRow = {
     business_id: businessId,
@@ -88,12 +105,9 @@ export async function POST(request: Request) {
     status: "new",
   };
 
-  let insertedId: string | null = null;
-  const first = await supabase.from("lisa_quote_requests").insert(fullRow).select("id").single();
-  if (first.error) {
-    console.error("Quote insert with extra columns failed:", first.error.message);
-    const fallbackNotes = [notes, quote_time ? `Quote time: ${quote_time}` : "", cleaning_schedule ? `Schedule: ${cleaning_schedule}` : "", cleaning_time ? `Cleaning time: ${cleaning_time}` : ""].filter(Boolean).join("\n");
-    const fallback = await supabase.from("lisa_quote_requests").insert({
+  const attempts: Record<string, unknown>[] = [
+    fullRow,
+    {
       business_id: businessId,
       name,
       phone,
@@ -101,32 +115,56 @@ export async function POST(request: Request) {
       job_address,
       type_of_clean,
       preferred_date,
-      notes: fallbackNotes || null,
+      notes: [notes, quote_time ? `Quote time: ${quote_time}` : "", cleaning_schedule ? `Schedule: ${cleaning_schedule}` : "", cleaning_time ? `Cleaning time: ${cleaning_time}` : ""].filter(Boolean).join("\n") || null,
       consent_at,
       status: "new",
-    }).select("id").single();
-    if (fallback.error) {
-      console.error("Quote insert failed:", fallback.error.message);
-      return fail("The request didn’t save. Try again in a minute, or call (252) 659-1868.", 500);
+    },
+    {
+      business_id: businessId,
+      name,
+      phone,
+      job_address,
+      type_of_clean,
+      notes: notes || null,
+    },
+  ];
+
+  let lastError = "Unknown save error.";
+  let insertedId: string | null = null;
+  for (const row of attempts) {
+    const result = await supabase.from("lisa_quote_requests").insert(row).select("id").maybeSingle();
+    if (!result.error) {
+      insertedId = result.data?.id ?? null;
+      lastError = "";
+      break;
     }
-    insertedId = fallback.data?.id ?? null;
-  } else {
-    insertedId = first.data?.id ?? null;
+    lastError = result.error.message;
+    if (result.error.message.toLowerCase().includes("row-level security")) {
+      const blind = await supabase.from("lisa_quote_requests").insert(row);
+      if (!blind.error) {
+        lastError = "";
+        break;
+      }
+      lastError = blind.error.message;
+    }
+  }
+  if (lastError) {
+    console.error("Quote insert failed:", lastError);
+    return fail(explainInsertError(lastError), 500);
   }
 
   const webhookUrl = process.env.N8N_WEBHOOK_URL || DEFAULT_N8N_WEBHOOK_URL;
-  if (webhookUrl.includes(BLOCKED_N8N_WEBHOOK_ID)) {
-    return NextResponse.json({ ok: true });
-  }
-  try {
-    const n8nRes = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: insertedId, ...fullRow, source: "lisascleaners" }),
-    });
-    if (!n8nRes.ok) console.error("n8n webhook failed:", n8nRes.status);
-  } catch (err) {
-    console.error("n8n webhook error:", err);
+  if (!webhookUrl.includes(BLOCKED_N8N_WEBHOOK_ID)) {
+    try {
+      const n8nRes = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: insertedId, ...fullRow, source: "lisascleaners" }),
+      });
+      if (!n8nRes.ok) console.error("n8n webhook failed:", n8nRes.status);
+    } catch (err) {
+      console.error("n8n webhook error:", err);
+    }
   }
   return NextResponse.json({ ok: true });
 }
