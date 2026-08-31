@@ -4,6 +4,14 @@ import { DEFAULT_LISA_BUSINESS_ID } from "@/lib/site";
 
 export const runtime = "nodejs";
 
+type ProfileRow = {
+  id: string;
+  business_id?: string;
+  full_name: string;
+  role: "admin" | "staff";
+  email?: string;
+};
+
 async function findAuthUserByEmail(admin: ReturnType<typeof createClient>, email: string) {
   const target = email.trim().toLowerCase();
   for (let page = 1; page <= 20; page += 1) {
@@ -23,7 +31,7 @@ async function saveProfile(admin: ReturnType<typeof createClient>, row: {
   role: "admin" | "staff";
   email: string;
 }) {
-  const payloads: Record<string, unknown>[] = [
+  const payloads: ProfileRow[] = [
     row,
     { id: row.id, business_id: row.business_id, full_name: row.full_name, role: row.role, email: row.email },
     { id: row.id, business_id: row.business_id, full_name: row.full_name, role: row.role },
@@ -31,7 +39,7 @@ async function saveProfile(admin: ReturnType<typeof createClient>, row: {
   ];
   let lastError = "Could not save staff profile.";
   for (const payload of payloads) {
-    const insert = await admin.from("lisa_profiles").upsert(payload, { onConflict: "id" });
+    const insert = await admin.from("lisa_profiles").upsert(payload as never, { onConflict: "id" });
     if (!insert.error) return null;
     lastError = insert.error.message;
     if (/already exists|duplicate|unique/i.test(insert.error.message) && row.email) {
@@ -41,7 +49,7 @@ async function saveProfile(admin: ReturnType<typeof createClient>, row: {
           full_name: row.full_name,
           role: row.role,
           business_id: row.business_id,
-        }).eq("id", existing.data.id);
+        } as never).eq("id", existing.data.id);
         if (!update.error) return null;
         lastError = update.error.message;
       }
@@ -80,7 +88,7 @@ export async function POST(request: Request) {
   }
   if (!serviceKey) {
     return NextResponse.json({
-      error: "Add SUPABASE_SERVICE_ROLE_KEY to .env.local, then restart npm run dev.",
+      error: "Add SUPABASE_SERVICE_ROLE_KEY to Vercel env, then redeploy.",
     }, { status: 501 });
   }
 
