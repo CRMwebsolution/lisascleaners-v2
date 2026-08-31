@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Fraunces, Geist } from "next/font/google";
 import JsonLd from "@/components/JsonLd";
 import SiteChrome from "@/components/SiteChrome";
 import { BUSINESS_NAME, SITE_URL } from "@/lib/site";
@@ -7,6 +7,11 @@ import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
 });
 
@@ -34,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} min-h-screen antialiased`}>
+      <body className={`${geistSans.variable} ${fraunces.variable} min-h-screen antialiased`}>
         <JsonLd />
         <SiteChrome>{children}</SiteChrome>
       </body>

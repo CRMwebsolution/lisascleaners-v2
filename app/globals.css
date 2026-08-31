@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --purple-dark: #3b0764;
-  --purple-mid: #5b21b6;
-  --purple-light: #ddd6fe;
-  --purple-soft: #f5f3ff;
-  --white: #ffffff;
-  --ink: #2e1065;
+  --purple-dark: #16324f;
+  --purple-mid: #2a7f74;
+  --purple-light: #d5ebe6;
+  --purple-soft: #f3f8f6;
+  --white: #fffcf8;
+  --ink: #1c2e3d;
+  --sand: #e6d5bc;
+  --cream: #f7f1e8;
+  --sea: #4aa3a0;
 }
 
 @theme inline {
@@ -15,7 +18,11 @@
   --color-purple-light: var(--purple-light);
   --color-purple-soft: var(--purple-soft);
   --color-ink: var(--ink);
+  --color-sand: var(--sand);
+  --color-cream: var(--cream);
+  --color-sea: var(--sea);
   --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-fraunces);
 }
 
 html {
@@ -26,6 +33,12 @@ body {
   background: var(--white);
   color: var(--ink);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
 }
 
 a:focus-visible,
@@ -40,4 +53,14 @@ textarea:focus-visible {
 .tap {
   min-height: 44px;
   min-width: 44px;
+}
+
+.card-lift {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(22, 50, 79, 0.1);
+  border-color: var(--purple-mid);
 }
