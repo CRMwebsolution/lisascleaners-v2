@@ -1,8 +1,40 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type User } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { DEFAULT_LISA_BUSINESS_ID } from "@/lib/site";
 
 export const runtime = "nodejs";
+
+async function findAuthUserByEmail(admin: ReturnType<typeof createClient>, email: string) {
+  const target = email.trim().toLowerCase();
+  for (let page = 1; page <= 10; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const match = data.users.find((user) => (user.email ?? "").toLowerCase() === target);
+    if (match) return match;
+    if (data.users.length < 200) return null;
+  }
+  return null;
+}
+
+async function upsertProfile(
+  admin: ReturnType<typeof createClient>,
+  row: Record<string, unknown>,
+) {
+  const attempts: Record<string, unknown>[] = [
+    row,
+    { id: row.id, business_id: row.business_id, full_name: row.full_name, role: row.role, email: row.email },
+    { id: row.id, business_id: row.business_id, full_name: row.full_name, role: row.role },
+    { id: row.id, full_name: row.full_name, role: row.role },
+  ];
+  let lastError = "Could not save staff profile.";
+  for (const payload of attempts) {
+    const { error } = await admin.from("lisa_profiles").upsert(payload);
+    if (!error) return null;
+    lastError = error.message;
+    if (!/column|schema cache|foreign key|email/i.test(error.message)) break;
+  }
+  return lastError;
+}
 
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,39 +73,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session expired. Sign in again." }, { status: 401 });
   }
 
-  const profileClient = serviceKey ? createClient(supabaseUrl, serviceKey) : authed;
-  const { data: profile } = await profileClient.from("lisa_profiles").select("role").eq("id", userData.user.id).maybeSingle();
-  if (profile?.role !== "admin") {
-    return NextResponse.json({ error: "Admin only." }, { status: 403 });
-  }
-
   if (!serviceKey) {
     return NextResponse.json({
-      error: "Add SUPABASE_SERVICE_ROLE_KEY to .env.local, then restart npm run dev. That key stays on the server and is required to create login accounts.",
+      error: "Add SUPABASE_SERVICE_ROLE_KEY to .env.local, then restart npm run dev. Needed to create login accounts.",
     }, { status: 501 });
   }
 
   const admin = createClient(supabaseUrl, serviceKey);
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email: body.email,
-    password: body.password,
-    email_confirm: true,
-    user_metadata: { full_name: body.full_name, role: body.role },
-  });
-  if (createError || !created.user) {
-    return NextResponse.json({ error: createError?.message ?? "Could not create user." }, { status: 400 });
+  const { data: actor } = await admin.from("lisa_profiles").select("role").eq("id", userData.user.id).maybeSingle();
+  if (actor?.role !== "admin") {
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
   }
 
-  const businessId = process.env.LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
-  const { error: profileError } = await admin.from("lisa_profiles").upsert({
-    id: created.user.id,
-    business_id: businessId,
-    full_name: body.full_name,
+  let user: User | null = null;
+  const created = await admin.auth.admin.createUser({
+    email: body.email.trim(),
+    password: body.password,
+    email_confirm: true,
+    user_metadata: { full_name: body.full_name.trim(), role: body.role },
+  });
+  if (created.data.user) {
+    user = created.data.user;
+  } else if (/already|registered|exists/i.test(created.error?.message ?? "")) {
+    user = await findAuthUserByEmail(admin, body.email);
+    if (user) {
+      await admin.auth.admin.updateUserById(user.id, {
+        password: body.password,
+        email_confirm: true,
+        user_metadata: { full_name: body.full_name.trim(), role: body.role },
+      });
+    }
+  }
+  if (!user) {
+    return NextResponse.json({ error: created.error?.message ?? "Could not create login." }, { status: 400 });
+  }
+
+  const profileError = await upsertProfile(admin, {
+    id: user.id,
+    business_id: process.env.LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID,
+    full_name: body.full_name.trim(),
     role: body.role,
-    email: body.email,
+    email: body.email.trim(),
   });
   if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 400 });
+    return NextResponse.json({
+      error: `${profileError} Login was created. If this mentions a foreign key, drop lisa_profiles.id → auth.users and keep the UUID match only.`,
+    }, { status: 400 });
   }
-  return NextResponse.json({ ok: true, id: created.user.id });
+
+  return NextResponse.json({ ok: true, id: user.id, reused: Boolean(created.error) });
 }
