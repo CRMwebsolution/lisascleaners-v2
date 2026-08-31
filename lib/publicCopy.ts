@@ -1,8 +1,8 @@
 export const HERO_WORDS = ["home", "office", "rental"] as const;
 export const HERO_LEDE = "Trusted local cleaning across Newport and nearby coastal towns.";
 export const HERO_IMAGE =
-  "https://fhyzsisluszpfhlngiyb.supabase.co/storage/v1/object/public/other_sites/lisascleners/4347.jpg";
-export const HERO_IMAGE_ALT = "A sparkling clean home interior after a visit from Lisa";
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80";
+export const HERO_IMAGE_ALT = "Bright, clean kitchen and living space ready after a visit";
 
 export const TRUST_MARKERS = [
   "Locally owned",

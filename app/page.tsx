@@ -18,26 +18,27 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <main id="main">
-      <section className="relative isolate min-h-[78vh] overflow-hidden bg-purple-dark">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={HERO_IMAGE} alt={HERO_IMAGE_ALT} className="absolute inset-0 h-full w-full object-cover object-center" />
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-dark/80 via-purple-dark/55 to-purple-dark/25" />
-        <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-end px-4 py-16 sm:justify-center sm:py-24">
+      <section className="grid min-h-[78vh] bg-purple-dark lg:grid-cols-2">
+        <div className="flex flex-col justify-center px-4 py-14 sm:px-8 lg:px-12">
           <div className="max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sand">{BUSINESS_NAME}</p>
             <HeroHeadline />
             <p className="mt-4 text-lg text-white/90">{HERO_LEDE}</p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-purple-dark">{CTA_LABEL}</Link>
+              <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-white hover:text-purple-dark">{CTA_LABEL}</Link>
               <a href={`tel:${PHONE_TEL}`} className="tap inline-flex items-center justify-center rounded-full border-2 border-white px-6 text-base font-semibold text-white">Call Lisa, {PHONE_DISPLAY}</a>
             </div>
             <p className="mt-3 text-sm text-white/80">{QUOTE_REASSURANCE}</p>
             <ul className="mt-8 flex flex-wrap gap-2">
               {TRUST_MARKERS.map((item) => (
-                <li key={item} className="rounded-full bg-white/15 px-3 py-1 text-sm text-white backdrop-blur-sm">{item}</li>
+                <li key={item} className="rounded-full bg-white/15 px-3 py-1 text-sm text-white">{item}</li>
               ))}
             </ul>
           </div>
+        </div>
+        <div className="relative min-h-[280px] bg-purple-soft">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={HERO_IMAGE} alt={HERO_IMAGE_ALT} className="absolute inset-0 h-full w-full object-cover object-center" />
         </div>
       </section>
       <section className="bg-white">
