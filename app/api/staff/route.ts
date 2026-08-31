@@ -28,20 +28,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Role must be admin or staff." }, { status: 400 });
   }
 
-  const userClient = createClient(supabaseUrl, anonKey);
-  const token = authHeader?.replace("Bearer ", "") || body.access_token;
-  if (token) {
-    const { data: userData } = await userClient.auth.getUser(token);
-    if (userData.user) {
-      const { data: profile } = await userClient.from("lisa_profiles").select("role").eq("id", userData.user.id).maybeSingle();
-      if (profile?.role !== "admin") {
-        return NextResponse.json({ error: "Admin only." }, { status: 403 });
-      }
-    }
+  const token = authHeader?.replace(/^Bearer\s+/i, "") || body.access_token;
+  if (!token) {
+    return NextResponse.json({ error: "Sign in as an admin and try again." }, { status: 401 });
+  }
+
+  const authed = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: userData, error: userError } = await authed.auth.getUser(token);
+  if (userError || !userData.user) {
+    return NextResponse.json({ error: "Session expired. Sign in again." }, { status: 401 });
+  }
+
+  const profileClient = serviceKey ? createClient(supabaseUrl, serviceKey) : authed;
+  const { data: profile } = await profileClient.from("lisa_profiles").select("role").eq("id", userData.user.id).maybeSingle();
+  if (profile?.role !== "admin") {
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
   }
 
   if (!serviceKey) {
-    return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY is not set. Create the auth user in Supabase, then add the profile." }, { status: 501 });
+    return NextResponse.json({
+      error: "Add SUPABASE_SERVICE_ROLE_KEY to .env.local, then restart npm run dev. That key stays on the server and is required to create login accounts.",
+    }, { status: 501 });
   }
 
   const admin = createClient(supabaseUrl, serviceKey);

@@ -6,6 +6,7 @@ import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile } from "@/lib/types";
 import JobCalendar, { type CalView } from "@/components/staff/JobCalendar";
 import JobDetailModal from "@/components/staff/JobDetailModal";
+import ChangePasswordModal from "@/components/staff/ChangePasswordModal";
 
 export default function StaffDashboard() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function StaffDashboard() {
   const [calDate, setCalDate] = useState(new Date());
   const [calView, setCalView] = useState<CalView>("month");
   const [selectedJob, setSelectedJob] = useState<JobWithAssignments | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const load = useCallback(async (userId: string) => {
     const supabase = getSupabaseBrowser();
@@ -63,7 +65,7 @@ export default function StaffDashboard() {
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-purple-soft">
-        <p>Loading dashboard…</p>
+        <p>Loading dashboard\u2026</p>
       </div>
     );
   }
@@ -75,16 +77,21 @@ export default function StaffDashboard() {
           <h1 className="text-2xl font-bold text-purple-dark">My schedule</h1>
           <p className="text-sm">{profile?.full_name}</p>
         </div>
-        <button
-          type="button"
-          className="tap text-sm text-purple-mid"
-          onClick={async () => {
-            await getSupabaseBrowser().auth.signOut();
-            router.replace("/login");
-          }}
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <button type="button" className="tap text-sm text-purple-mid" onClick={() => setShowPassword(true)}>
+            Change password
+          </button>
+          <button
+            type="button"
+            className="tap text-sm text-purple-mid"
+            onClick={async () => {
+              await getSupabaseBrowser().auth.signOut();
+              router.replace("/login");
+            }}
+          >
+            Sign out
+          </button>
+        </div>
       </div>
       <JobCalendar
         jobs={jobs}
@@ -94,6 +101,7 @@ export default function StaffDashboard() {
         onDate={setCalDate}
         onJobClick={setSelectedJob}
       />
+      {showPassword ? <ChangePasswordModal onClose={() => setShowPassword(false)} /> : null}
       {selectedJob ? (
         <JobDetailModal
           job={selectedJob}
