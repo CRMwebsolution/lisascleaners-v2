@@ -15,6 +15,24 @@ function money(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
+function thanksImage() {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  canvas.width = 600;
+  canvas.height = 120;
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "italic 28px 'Brush Script MT', 'Segoe Script', cursive";
+  ctx.fillStyle = "#8B5CF6";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ["Thank you", "- Lisa", "(Lisa's Cleaning)"].forEach((line, i) => {
+    ctx.fillText(line, canvas.width / 2, 8 + i * 34);
+  });
+  return canvas.toDataURL("image/png");
+}
+
 export function downloadLisaPdf(opts: {
   kind: DocKind;
   number: string;
@@ -22,6 +40,7 @@ export function downloadLisaPdf(opts: {
   address?: string;
   date: string;
   lines: DocLine[];
+  includeThanks?: boolean;
 }) {
   const doc = new jsPDF();
   const title = opts.kind === "quote" ? "Quote" : "Invoice";
@@ -64,8 +83,13 @@ export function downloadLisaPdf(opts: {
   if (opts.kind === "quote") {
     doc.setFontSize(10);
     doc.text("This is a quote, not an invoice and not a booking.", 14, y + 16);
+    y += 10;
   }
 
-  const filename = `${opts.kind}-${opts.number}.pdf`;
-  doc.save(filename);
+  if (opts.includeThanks) {
+    const image = thanksImage();
+    if (image) doc.addImage(image, "PNG", 45, y + 22, 120, 28);
+  }
+
+  doc.save(`${opts.kind}-${opts.number}.pdf`);
 }
