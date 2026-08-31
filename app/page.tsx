@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CoastalMap from "@/components/CoastalMap";
 import GalleryPreview from "@/components/GalleryPreview";
+import HeroHeadline from "@/components/HeroHeadline";
 import QuoteBand from "@/components/QuoteBand";
 import ServiceCards from "@/components/ServiceCards";
 import WhyLisa from "@/components/WhyLisa";
-import { HERO_HEADLINE, HERO_IMAGE, HERO_IMAGE_ALT, HERO_LEDE, LOCAL_LINE, QUOTE_REASSURANCE, TRUST_MARKERS } from "@/lib/publicCopy";
+import { HERO_IMAGE, HERO_IMAGE_ALT, HERO_LEDE, LOCAL_LINE, QUOTE_REASSURANCE, TRUST_MARKERS } from "@/lib/publicCopy";
 import { BUSINESS_NAME, CTA_LABEL, PHONE_DISPLAY, PHONE_TEL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -23,11 +24,11 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-purple-dark/85 via-purple-dark/70 to-purple-dark/30" />
         <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-end px-4 py-16 sm:justify-center sm:py-24">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sand">{BUSINESS_NAME}</p>
-          <h1 className="font-display mt-3 max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">{HERO_HEADLINE}</h1>
+          <HeroHeadline />
           <p className="mt-4 max-w-xl text-lg text-white/90">{HERO_LEDE}</p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-sea">{CTA_LABEL}</Link>
-            <a href={`tel:${PHONE_TEL}`} className="tap inline-flex items-center justify-center rounded-full border-2 border-white px-6 text-base font-semibold text-white">Call Lisa \u00b7 {PHONE_DISPLAY}</a>
+            <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-purple-dark">{CTA_LABEL}</Link>
+            <a href={`tel:${PHONE_TEL}`} className="tap inline-flex items-center justify-center rounded-full border-2 border-white px-6 text-base font-semibold text-white">Call Lisa, {PHONE_DISPLAY}</a>
           </div>
           <p className="mt-3 text-sm text-white/80">{QUOTE_REASSURANCE}</p>
           <ul className="mt-8 flex flex-wrap gap-2">
@@ -50,7 +51,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-4 py-20">
           <p className="text-sm font-semibold uppercase tracking-wide text-purple-mid">Why choose Lisa</p>
           <h2 className="font-display mt-2 max-w-2xl text-3xl font-semibold text-purple-dark">A personable local service you can ask into your home</h2>
-          <p className="mt-3 max-w-2xl">Hi, I’m Lisa. I clean one job at a time and follow up on every quote myself. If you want a recent reference in your town, call and I’ll share one.</p>
+          <p className="mt-3 max-w-2xl">Hi, I am Lisa. I clean one job at a time and follow up on every quote myself. If you want a recent reference in your town, call and I will share one.</p>
           <div className="mt-8"><WhyLisa /></div>
         </div>
       </section>

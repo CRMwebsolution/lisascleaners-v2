@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --purple-dark: #16324f;
-  --purple-mid: #2a7f74;
-  --purple-light: #d5ebe6;
-  --purple-soft: #f3f8f6;
-  --white: #fffcf8;
-  --ink: #1c2e3d;
-  --sand: #e6d5bc;
-  --cream: #f7f1e8;
-  --sea: #4aa3a0;
+  --purple-dark: #3b0764;
+  --purple-mid: #5b21b6;
+  --purple-light: #ddd6fe;
+  --purple-soft: #f5f3ff;
+  --white: #ffffff;
+  --ink: #2e1065;
+  --sand: #ede9fe;
+  --cream: #f5f3ff;
+  --sea: #5b21b6;
 }
 
 @theme inline {
@@ -61,6 +61,6 @@ textarea:focus-visible {
 
 .card-lift:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(22, 50, 79, 0.1);
+  box-shadow: 0 12px 28px rgba(91, 33, 182, 0.12);
   border-color: var(--purple-mid);
 }
