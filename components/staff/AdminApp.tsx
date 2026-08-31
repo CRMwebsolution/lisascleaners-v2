@@ -9,6 +9,7 @@ import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile, QuoteRequest, StaffRole } from "@/lib/types";
 import JobCalendar, { type CalView } from "@/components/staff/JobCalendar";
 import JobDetailModal from "@/components/staff/JobDetailModal";
+import ChangePasswordModal from "@/components/staff/ChangePasswordModal";
 
 type Section = "requests" | "calendar" | "jobs" | "staff" | "documents";
 const inputCls = "w-full rounded-md border border-purple-light px-3 py-2 text-sm";
@@ -62,6 +63,7 @@ export default function AdminApp() {
   const [draft, setDraft] = useState<Partial<JobWithAssignments> | null>(null);
   const [sourceRequest, setSourceRequest] = useState<QuoteRequest | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobWithAssignments | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseBrowser();
@@ -100,7 +102,8 @@ export default function AdminApp() {
             <button key={id} type="button" onClick={() => setSection(id)} className={`tap rounded-md px-3 text-left text-sm capitalize ${section === id ? "bg-purple-mid text-white" : "bg-purple-soft text-purple-dark"}`}>{id}</button>
           ))}
         </nav>
-        <button type="button" className="tap mt-4 text-sm text-purple-mid" onClick={async () => { await getSupabaseBrowser().auth.signOut(); router.replace("/login"); }}>Sign out</button>
+        <button type="button" className="tap mt-4 block text-sm text-purple-mid" onClick={() => setShowPassword(true)}>Change password</button>
+        <button type="button" className="tap mt-2 text-sm text-purple-mid" onClick={async () => { await getSupabaseBrowser().auth.signOut(); router.replace("/login"); }}>Sign out</button>
       </aside>
       <main className="flex-1 p-4 lg:p-6">
         {error ? <p className="mb-3 rounded-md bg-white p-3 text-sm text-red-700">{error}</p> : null}
@@ -126,6 +129,7 @@ export default function AdminApp() {
         {selectedJob ? (
           <JobDetailModal job={selectedJob} isAdmin currentUserId={profile?.id ?? ""} onClose={() => setSelectedJob(null)} onUpdated={load} />
         ) : null}
+        {showPassword ? <ChangePasswordModal onClose={() => setShowPassword(false)} /> : null}
       </main>
     </div>
   );
