@@ -66,14 +66,19 @@ textarea:focus-visible {
 }
 
 .hero-cycle {
-  display: inline-grid;
+  display: inline-block;
+  position: relative;
+  width: 5.6em;
+  height: 1.15em;
+  overflow: hidden;
   vertical-align: baseline;
-  min-width: 7.6ch;
-  text-align: left;
 }
 
 .hero-cycle span {
-  grid-area: 1 / 1;
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
   opacity: 0;
   animation: hero-word 7.5s infinite;
 }
@@ -93,27 +98,22 @@ textarea:focus-visible {
 @keyframes hero-word {
   0% {
     opacity: 0;
+    transform: translateY(0.25em);
   }
-  4% {
+  6% {
     opacity: 1;
+    transform: translateY(0);
   }
-  29% {
+  27% {
     opacity: 1;
+    transform: translateY(0);
   }
   33% {
     opacity: 0;
+    transform: translateY(-0.2em);
   }
   100% {
     opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-cycle span {
-    animation: none;
-    opacity: 0;
-  }
-  .hero-cycle span:first-child {
-    opacity: 1;
+    transform: translateY(-0.2em);
   }
 }

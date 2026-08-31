@@ -18,24 +18,26 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <main id="main">
-      <section className="relative isolate min-h-[78vh] overflow-hidden">
+      <section className="relative isolate min-h-[78vh] overflow-hidden bg-purple-dark">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={HERO_IMAGE} alt={HERO_IMAGE_ALT} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-dark/85 via-purple-dark/70 to-purple-dark/30" />
+        <img src={HERO_IMAGE} alt={HERO_IMAGE_ALT} className="absolute inset-0 h-full w-full object-cover object-center" />
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-dark/80 via-purple-dark/55 to-purple-dark/25" />
         <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-end px-4 py-16 sm:justify-center sm:py-24">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sand">{BUSINESS_NAME}</p>
-          <HeroHeadline />
-          <p className="mt-4 max-w-xl text-lg text-white/90">{HERO_LEDE}</p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-purple-dark">{CTA_LABEL}</Link>
-            <a href={`tel:${PHONE_TEL}`} className="tap inline-flex items-center justify-center rounded-full border-2 border-white px-6 text-base font-semibold text-white">Call Lisa, {PHONE_DISPLAY}</a>
+          <div className="max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sand">{BUSINESS_NAME}</p>
+            <HeroHeadline />
+            <p className="mt-4 text-lg text-white/90">{HERO_LEDE}</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-purple-dark">{CTA_LABEL}</Link>
+              <a href={`tel:${PHONE_TEL}`} className="tap inline-flex items-center justify-center rounded-full border-2 border-white px-6 text-base font-semibold text-white">Call Lisa, {PHONE_DISPLAY}</a>
+            </div>
+            <p className="mt-3 text-sm text-white/80">{QUOTE_REASSURANCE}</p>
+            <ul className="mt-8 flex flex-wrap gap-2">
+              {TRUST_MARKERS.map((item) => (
+                <li key={item} className="rounded-full bg-white/15 px-3 py-1 text-sm text-white backdrop-blur-sm">{item}</li>
+              ))}
+            </ul>
           </div>
-          <p className="mt-3 text-sm text-white/80">{QUOTE_REASSURANCE}</p>
-          <ul className="mt-8 flex flex-wrap gap-2">
-            {TRUST_MARKERS.map((item) => (
-              <li key={item} className="rounded-full bg-white/15 px-3 py-1 text-sm text-white backdrop-blur-sm">{item}</li>
-            ))}
-          </ul>
         </div>
       </section>
       <section className="bg-white">
