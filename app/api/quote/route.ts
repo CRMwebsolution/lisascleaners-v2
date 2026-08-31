@@ -5,7 +5,6 @@ import {
   isAllowedQuoteDate,
   isTypeOfClean,
   isUsPhone,
-  QUOTE_ERROR,
 } from "@/lib/site";
 
 export const runtime = "nodejs";
@@ -24,12 +23,16 @@ function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function fail(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
 export async function POST(request: Request) {
   let body: QuoteBody;
   try {
     body = (await request.json()) as QuoteBody;
   } catch {
-    return NextResponse.json({ error: QUOTE_ERROR }, { status: 400 });
+    return fail("The form didn’t send any information. Refresh the page and try again.");
   }
 
   const name = asString(body.name);
@@ -44,21 +47,26 @@ export async function POST(request: Request) {
   const notes = asString(body.notes);
   const consent = body.consent === true;
 
-  if (!name || name.length < 2 || !phone || !job_address || job_address.length < 5 || !type_of_clean || !consent) {
-    return NextResponse.json({ error: QUOTE_ERROR }, { status: 400 });
+  if (!name || name.length < 2) return fail("Please enter your full name.");
+  if (!phone) return fail("A phone number is required so Lisa can call you back.");
+  if (!isUsPhone(phone)) return fail("Use a US phone number, like (252) 555-1234.");
+  if (email && !isEmail(email)) return fail("That email doesn’t look right. Fix the typo or leave email blank.");
+  if (!job_address || job_address.length < 5) return fail("Enter the job address so Lisa knows where to come.");
+  if (!type_of_clean || !isTypeOfClean(type_of_clean)) return fail("Choose the type of clean you need.");
+  if (!consent) return fail("Check the box so Lisa can keep this request and follow up.");
+  if (!preferred_date) return fail("Pick a quote date. Only Friday, Saturday, Sunday, or Monday work.");
+  if (!isAllowedQuoteDate(preferred_date)) {
+    return fail("That date is not available. Quote visits are Friday through Monday only — not Tuesday, Wednesday, or Thursday.");
   }
-  if (!isUsPhone(phone) || (email && !isEmail(email)) || !isTypeOfClean(type_of_clean)) {
-    return NextResponse.json({ error: QUOTE_ERROR }, { status: 400 });
-  }
-  if (!preferred_date || !isAllowedQuoteDate(preferred_date) || !quote_time || !cleaning_schedule || !cleaning_time) {
-    return NextResponse.json({ error: QUOTE_ERROR }, { status: 400 });
-  }
+  if (!quote_time) return fail("Pick a time window for the quote visit.");
+  if (!cleaning_schedule) return fail("Tell us how often you want the cleaning.");
+  if (!cleaning_time) return fail("Pick a time window for the cleaning itself.");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error("Missing Supabase env");
-    return NextResponse.json({ error: QUOTE_ERROR }, { status: 500 });
+    return fail("The quote form is missing its database connection. Call (252) 659-1868 and we’ll take it by phone.", 500);
   }
 
   const businessId = process.env.LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
@@ -99,7 +107,7 @@ export async function POST(request: Request) {
     }).select("id").single();
     if (fallback.error) {
       console.error("Quote insert failed:", fallback.error.message);
-      return NextResponse.json({ error: QUOTE_ERROR }, { status: 500 });
+      return fail("The request didn’t save. Try again in a minute, or call (252) 659-1868.", 500);
     }
     insertedId = fallback.data?.id ?? null;
   } else {
