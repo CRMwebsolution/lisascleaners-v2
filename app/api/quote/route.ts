@@ -33,15 +33,15 @@ function explainInsertError(message: string) {
     return "The quote table is locked from public submits. In Supabase SQL run: grant insert on public.lisa_quote_requests to anon, authenticated; then add an insert policy for anon.";
   }
   if (text.includes("business_id") || text.includes("foreign key")) {
-    return "The business id on this request doesn’t match the Lisa business row. Check LISA_BUSINESS_ID in .env.local.";
+    return "The business id on this request does not match the Lisa business row. Check LISA_BUSINESS_ID in env.";
   }
   if (text.includes("column") || text.includes("schema cache")) {
     return `The quote table is missing a column the form needs. ${message}`;
   }
   if (text.includes("permission") || text.includes("42501")) {
-    return "The website login key isn’t allowed to write quote requests. Add SUPABASE_SERVICE_ROLE_KEY to .env.local and restart npm run dev.";
+    return "The website login key is not allowed to write quote requests. Add SUPABASE_SERVICE_ROLE_KEY in Vercel env.";
   }
-  return `The request didn’t save: ${message} If that keeps happening, call (252) 659-1868.`;
+  return `The request did not save: ${message} If that keeps happening, call (252) 659-1868.`;
 }
 
 export async function POST(request: Request) {
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as QuoteBody;
   } catch {
-    return fail("The form didn’t send any information. Refresh the page and try again.");
+    return fail("The form did not send any information. Refresh the page and try again.");
   }
 
   const name = asString(body.name);
@@ -67,13 +67,13 @@ export async function POST(request: Request) {
   if (!name || name.length < 2) return fail("Please enter your full name.");
   if (!phone) return fail("A phone number is required so Lisa can call you back.");
   if (!isUsPhone(phone)) return fail("Use a US phone number, like (252) 555-1234.");
-  if (email && !isEmail(email)) return fail("That email doesn’t look right. Fix the typo or leave email blank.");
+  if (email && !isEmail(email)) return fail("That email does not look right. Fix the typo or leave email blank.");
   if (!job_address || job_address.length < 5) return fail("Enter the job address so Lisa knows where to come.");
   if (!type_of_clean || !isTypeOfClean(type_of_clean)) return fail("Choose the type of clean you need.");
   if (!consent) return fail("Check the box so Lisa can keep this request and follow up.");
   if (!preferred_date) return fail("Pick a quote date. Only Friday, Saturday, Sunday, or Monday work.");
   if (!isAllowedQuoteDate(preferred_date)) {
-    return fail("That date is not available. Quote visits are Friday through Monday only — not Tuesday, Wednesday, or Thursday.");
+    return fail("That date is not available. Quote visits are Friday through Monday only, not Tuesday, Wednesday, or Thursday.");
   }
   if (!quote_time) return fail("Pick a time window for the quote visit.");
   if (!cleaning_schedule) return fail("Tell us how often you want the cleaning.");
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
-    return fail("The quote form is missing its database connection. Call (252) 659-1868 and we’ll take it by phone.", 500);
+    return fail("The quote form is missing its database connection. Call (252) 659-1868 and we will take it by phone.", 500);
   }
 
   const businessId = process.env.LISA_BUSINESS_ID || process.env.NEXT_PUBLIC_LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     status: "new",
   };
 
-  const attempts: Record<string, unknown>[] = [
+  const attempts = [
     fullRow,
     {
       business_id: businessId,
@@ -132,15 +132,15 @@ export async function POST(request: Request) {
   let lastError = "Unknown save error.";
   let insertedId: string | null = null;
   for (const row of attempts) {
-    const result = await supabase.from("lisa_quote_requests").insert(row).select("id").maybeSingle();
+    const result = await supabase.from("lisa_quote_requests").insert(row as never).select("id").maybeSingle();
     if (!result.error) {
-      insertedId = result.data?.id ?? null;
+      insertedId = (result.data as { id?: string } | null)?.id ?? null;
       lastError = "";
       break;
     }
     lastError = result.error.message;
     if (result.error.message.toLowerCase().includes("row-level security")) {
-      const blind = await supabase.from("lisa_quote_requests").insert(row);
+      const blind = await supabase.from("lisa_quote_requests").insert(row as never);
       if (!blind.error) {
         lastError = "";
         break;
