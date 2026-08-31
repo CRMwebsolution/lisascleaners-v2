@@ -32,7 +32,7 @@ export const SERVICES = [
   { slug: "deep-clean", label: "Deep clean", summary: "A thorough clean when a space needs extra attention." },
   { slug: "move-in-out", label: "Move in/out", summary: "Cleaning for move-in and move-out days." },
   { slug: "recurring", label: "Recurring", summary: "A regular schedule we set together." },
-//  { slug: "window-and-floor", label: "Window and floor", summary: "Window and floor cleaning." },
+  { slug: "window-and-floor", label: "Window and floor", summary: "Window and floor cleaning." },
   { slug: "vacation-rental", label: "Vacation rental", summary: "Turnover cleaning for vacation rentals." },
 ] as const;
 
@@ -42,7 +42,7 @@ export const JOB_SERVICE_TYPES = [
   "Deep clean",
   "Move in/out",
   "Recurring",
-//  "Window and floor",
+  "Window and floor",
   "Vacation rental",
 ] as const;
 
