@@ -1,120 +1,77 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ADDRESS_LINE,
-  BUSINESS_NAME,
-  CTA_LABEL,
-  HOME_H1,
-  HOURS_DISPLAY,
-  PHONE_DISPLAY,
-  PHONE_TEL,
-  SERVICES,
-  TOWNS,
-} from "@/lib/site";
+import CoastalMap from "@/components/CoastalMap";
+import GalleryPreview from "@/components/GalleryPreview";
+import QuoteBand from "@/components/QuoteBand";
+import ServiceCards from "@/components/ServiceCards";
+import WhyLisa from "@/components/WhyLisa";
+import { HERO_HEADLINE, HERO_IMAGE, HERO_IMAGE_ALT, HERO_LEDE, LOCAL_LINE, QUOTE_REASSURANCE, TRUST_MARKERS } from "@/lib/publicCopy";
+import { BUSINESS_NAME, CTA_LABEL, PHONE_DISPLAY, PHONE_TEL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: `House, Office & Vacation Rental Cleaning in Newport, NC | ${BUSINESS_NAME}`,
-  description:
-    "Cleaning for homes, offices, and vacation rentals in Newport and nearby coastal towns. Call Lisa or request a quote.",
+  description: "Cleaning for homes, offices, and vacation rentals in Newport and nearby coastal towns. Call Lisa or request a quote.",
   alternates: { canonical: "/" },
 };
 
 export default function HomePage() {
   return (
     <main id="main">
-      <section className="bg-purple-soft">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-          <p className="text-sm font-semibold uppercase tracking-wide text-purple-mid">
-            {BUSINESS_NAME}
-          </p>
-          <h1 className="mt-3 max-w-3xl text-3xl font-bold leading-tight text-purple-dark sm:text-4xl">
-            {HOME_H1}
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg">
-            Hi, I’m Lisa. I clean homes, offices, and vacation rentals around Newport and the
-            nearby coastal towns. Tell me what you need and I’ll follow up with a quote.
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/request-a-quote"
-              className="tap inline-flex items-center justify-center rounded-md bg-purple-mid px-5 text-base font-semibold text-white hover:bg-purple-dark"
-            >
-              {CTA_LABEL}
-            </Link>
-            <a
-              href={`tel:${PHONE_TEL}`}
-              className="tap inline-flex items-center justify-center rounded-md border-2 border-purple-dark px-5 text-base font-semibold text-purple-dark"
-            >
-              Call {PHONE_DISPLAY}
-            </a>
+      <section className="relative isolate min-h-[78vh] overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={HERO_IMAGE} alt={HERO_IMAGE_ALT} className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-dark/85 via-purple-dark/70 to-purple-dark/30" />
+        <div className="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-end px-4 py-16 sm:justify-center sm:py-24">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sand">{BUSINESS_NAME}</p>
+          <h1 className="font-display mt-3 max-w-3xl text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">{HERO_HEADLINE}</h1>
+          <p className="mt-4 max-w-xl text-lg text-white/90">{HERO_LEDE}</p>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Link href="/request-a-quote" className="tap inline-flex items-center justify-center rounded-full bg-purple-mid px-6 text-base font-semibold text-white hover:bg-sea">{CTA_LABEL}</Link>
+            <a href={`tel:${PHONE_TEL}`} className="tap inline-flex items-center justify-center rounded-full border-2 border-white px-6 text-base font-semibold text-white">Call Lisa \u00b7 {PHONE_DISPLAY}</a>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-12">
-        <h2 className="text-2xl font-bold text-purple-dark">How I can help</h2>
-        <p className="mt-2 max-w-2xl">
-          I offer residential, office, deep clean, move in/out, recurring, window and floor, and
-          vacation rental cleaning.
-        </p>
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service) => (
-            <li
-              key={service.slug}
-              className="rounded-lg border border-purple-light bg-white p-5"
-            >
-              <h3 className="text-lg font-semibold text-purple-dark">{service.label}</h3>
-              <p className="mt-2 text-sm">{service.summary}</p>
-            </li>
-          ))}
-        </ul>
-        <Link
-          href="/services"
-          className="tap mt-6 inline-flex items-center font-semibold text-purple-mid"
-        >
-          See all services
-        </Link>
-      </section>
-
-      <section className="bg-purple-soft">
-        <div className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-2xl font-bold text-purple-dark">Towns I serve</h2>
-          <p className="mt-2 max-w-2xl">
-            I’m based in {ADDRESS_LINE}. I clean in these coastal towns:
-          </p>
-          <ul className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-            {TOWNS.map((town) => (
-              <li
-                key={town}
-                className="rounded-md bg-white px-3 py-3 text-sm font-medium text-purple-dark"
-              >
-                {town}
-              </li>
+          <p className="mt-3 text-sm text-white/80">{QUOTE_REASSURANCE}</p>
+          <ul className="mt-8 flex flex-wrap gap-2">
+            {TRUST_MARKERS.map((item) => (
+              <li key={item} className="rounded-full bg-white/15 px-3 py-1 text-sm text-white backdrop-blur-sm">{item}</li>
             ))}
           </ul>
-          <Link
-            href="/areas"
-            className="tap mt-6 inline-flex items-center font-semibold text-purple-mid"
-          >
-            See service areas
-          </Link>
         </div>
       </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-12">
-        <h2 className="text-2xl font-bold text-purple-dark">Hours</h2>
-        <p className="mt-2">{HOURS_DISPLAY}</p>
-        <p className="mt-4">
-          This site is for quotes only. There is no public calendar hold and I do not take
-          payments here.
-        </p>
-        <Link
-          href="/request-a-quote"
-          className="tap mt-6 inline-flex items-center justify-center rounded-md bg-purple-mid px-5 text-base font-semibold text-white hover:bg-purple-dark"
-        >
-          {CTA_LABEL}
-        </Link>
+      <section className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-20">
+          <p className="text-sm font-semibold uppercase tracking-wide text-purple-mid">How I can help</p>
+          <h2 className="font-display mt-2 max-w-2xl text-3xl font-semibold text-purple-dark">Cleaning for homes, offices, and vacation rentals</h2>
+          <ServiceCards />
+          <Link href="/services" className="tap mt-8 inline-flex items-center font-semibold text-purple-mid">See all services</Link>
+        </div>
       </section>
+      <QuoteBand />
+      <section className="bg-purple-soft">
+        <div className="mx-auto max-w-6xl px-4 py-20">
+          <p className="text-sm font-semibold uppercase tracking-wide text-purple-mid">Why choose Lisa</p>
+          <h2 className="font-display mt-2 max-w-2xl text-3xl font-semibold text-purple-dark">A personable local service you can ask into your home</h2>
+          <p className="mt-3 max-w-2xl">Hi, I’m Lisa. I clean one job at a time and follow up on every quote myself. If you want a recent reference in your town, call and I’ll share one.</p>
+          <div className="mt-8"><WhyLisa /></div>
+        </div>
+      </section>
+      <section className="bg-white">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-purple-mid">Service area</p>
+            <h2 className="font-display mt-2 text-3xl font-semibold text-purple-dark">{LOCAL_LINE}</h2>
+            <p className="mt-3 max-w-xl">I travel to homes, offices, and rentals across these Crystal Coast towns.</p>
+            <div className="mt-6"><CoastalMap /></div>
+            <Link href="/areas" className="tap mt-6 inline-flex items-center font-semibold text-purple-mid">See service areas</Link>
+          </div>
+          <aside className="rounded-2xl bg-cream p-6">
+            <h3 className="font-display text-xl font-semibold text-purple-dark">Recent work</h3>
+            <p className="mt-2 text-sm">Photos from finished jobs. More will be added as new pictures come in.</p>
+            <div className="mt-4"><GalleryPreview count={3} /></div>
+            <Link href="/gallery" className="tap mt-5 inline-flex items-center font-semibold text-purple-mid">View cleaning gallery</Link>
+          </aside>
+        </div>
+      </section>
+      <QuoteBand tone="navy" />
     </main>
   );
 }
