@@ -1,39 +1,28 @@
-const GROUPS = [
-  {
-    title: "Based in",
-    towns: ["Newport"],
-  },
-  {
-    title: "Mainland towns",
-    towns: ["Morehead City", "Beaufort", "Cape Carteret", "Swansboro"],
-  },
-  {
-    title: "Crystal Coast beaches",
-    towns: ["Emerald Isle", "Indian Beach", "Pine Knoll Shores", "Atlantic Beach", "Harkers Island"],
-  },
-] as const;
+import { TOWNS } from "@/lib/site";
+
+const MAP_SRC =
+  "https://maps.google.com/maps?q=Carteret%20County%2C%20North%20Carolina&z=10&hl=en&output=embed";
 
 export default function CoastalMap() {
   return (
     <div className="overflow-hidden rounded-2xl border border-purple-light bg-white">
-      <div className="bg-purple-soft px-4 py-3">
-        <p className="text-sm font-semibold text-purple-dark">Towns Lisa serves</p>
-        <p className="mt-1 text-sm">Newport is home base. The rest are regular service towns on the mainland and along Bogue Banks.</p>
+      <div className="aspect-[16/10] min-h-[240px] bg-purple-soft">
+        <iframe
+          title="Map of Crystal Coast towns Lisa serves"
+          src={MAP_SRC}
+          className="h-full w-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
       </div>
-      <div className="grid gap-5 p-4 sm:grid-cols-3">
-        {GROUPS.map((group) => (
-          <div key={group.title}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-purple-mid">{group.title}</p>
-            <ul className="mt-2 space-y-2">
-              {group.towns.map((town) => (
-                <li key={town} className="rounded-full bg-purple-soft px-3 py-1 text-sm font-medium text-purple-dark">
-                  {town}
-                </li>
-              ))}
-            </ul>
-          </div>
+      <ul className="flex flex-wrap gap-2 border-t border-purple-light p-4">
+        {TOWNS.map((town) => (
+          <li key={town} className="rounded-full bg-purple-soft px-3 py-1 text-sm font-medium text-purple-dark">
+            {town}
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
