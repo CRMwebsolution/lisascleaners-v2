@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BUSINESS_NAME } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
@@ -26,6 +27,7 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
+  const supabaseHost = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace("https://", "");
 
   useEffect(() => {
     try {
@@ -64,7 +66,7 @@ export default function LoginForm() {
         if (message.includes("email not confirmed")) {
           setError("This login exists but the email is not confirmed in Supabase Auth. Open Authentication > Users, select the account, and mark the email confirmed.");
         } else if (message.includes("invalid") || message.includes("credentials")) {
-          setError("Supabase rejected that password. If you used Add staff on this same email, that form overwrote the old password. Reset it in Supabase Auth > Users.");
+          setError("Supabase rejected that password. Do not use the dashboard Recover link. It sends you to carteretlocal.com. Use Forgot password on this page after the redirect URLs are added.");
         } else {
           setError(signError.message);
         }
@@ -74,7 +76,7 @@ export default function LoginForm() {
       const userId = data.user?.id ?? data.session?.user.id;
       const token = data.session?.access_token;
       if (!userId || !token) {
-        setError("Signed in, but no session came back. Check that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set on this site.");
+        setError("Signed in, but no session came back. Redeploy Vercel after saving NEXT_PUBLIC_ keys. Those keys are baked in at build time.");
         setSubmitting(false);
         return;
       }
@@ -108,6 +110,8 @@ export default function LoginForm() {
           {submitting ? "Signing in..." : "Sign In"}
         </button>
       </form>
+      <Link href="/login/reset" className="mt-4 inline-flex text-sm font-semibold text-purple-mid">Forgot password</Link>
+      <p className="mt-3 text-xs text-purple-mid">Auth project: {supabaseHost || "missing NEXT_PUBLIC_SUPABASE_URL"}</p>
     </div>
   );
 }
