@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { downloadLisaPdf } from "@/lib/pdf";
 import type { JobWithAssignments, QuoteRequest } from "@/lib/types";
@@ -9,6 +9,25 @@ const inputCls = "w-full rounded-md border border-purple-light px-3 py-2 text-sm
 const labelCls = "mb-1 block text-sm font-semibold text-purple-dark";
 
 type Line = { item: string; qty: string; price: string };
+type PrefillOption = {
+  id: string;
+  kind: "job" | "request";
+  date: string;
+  name: string;
+  label: string;
+  job?: JobWithAssignments;
+  request?: QuoteRequest;
+};
+
+function todayIso() {
+  return format(new Date(), "yyyy-MM-dd");
+}
+
+function sortByDateName(left: PrefillOption, right: PrefillOption) {
+  const dateCmp = (left.date || "9999-99-99").localeCompare(right.date || "9999-99-99");
+  if (dateCmp !== 0) return dateCmp;
+  return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+}
 
 export default function DocumentsPanel({
   jobs,
@@ -18,11 +37,65 @@ export default function DocumentsPanel({
   requests: QuoteRequest[];
 }) {
   const [kind, setKind] = useState<"quote" | "invoice">("quote");
+  const [selectedId, setSelectedId] = useState("");
   const [customer, setCustomer] = useState("");
   const [address, setAddress] = useState("");
   const [number, setNumber] = useState("001");
   const [lines, setLines] = useState<Line[]>([{ item: "Cleaning", qty: "1", price: "" }]);
   const [includeThanks, setIncludeThanks] = useState(true);
+
+  const options = useMemo(() => {
+    const today = todayIso();
+    if (kind === "quote") {
+      const futureJobs: PrefillOption[] = jobs
+        .filter((job) => job.status !== "cancelled" && job.job_date >= today)
+        .map((job) => ({
+          id: `job:${job.id}`,
+          kind: "job" as const,
+          date: job.job_date,
+          name: job.customer_name,
+          label: `${job.job_date} · ${job.customer_name}`,
+          job,
+        }));
+      const openRequests: PrefillOption[] = requests
+        .filter((req) => req.status !== "declined" && (!req.preferred_date || req.preferred_date >= today))
+        .map((req) => ({
+          id: `req:${req.id}`,
+          kind: "request" as const,
+          date: req.preferred_date || req.created_at.slice(0, 10),
+          name: req.name,
+          label: `${req.preferred_date || "No date"} · ${req.name}`,
+          request: req,
+        }));
+      return [...futureJobs, ...openRequests].sort(sortByDateName);
+    }
+    return jobs
+      .filter((job) => job.status !== "cancelled")
+      .map((job) => ({
+        id: `job:${job.id}`,
+        kind: "job" as const,
+        date: job.job_date,
+        name: job.customer_name,
+        label: `${job.job_date} · ${job.customer_name}`,
+        job,
+      }))
+      .sort(sortByDateName);
+  }, [kind, jobs, requests]);
+
+  function applyPrefill(id: string) {
+    setSelectedId(id);
+    const option = options.find((row) => row.id === id);
+    if (!option) return;
+    if (option.job) {
+      setCustomer(option.job.customer_name);
+      setAddress(option.job.address);
+      setLines([{ item: option.job.type_of_clean, qty: "1", price: option.job.price != null ? String(option.job.price) : "" }]);
+    } else if (option.request) {
+      setCustomer(option.request.name);
+      setAddress(option.request.job_address);
+      setLines([{ item: option.request.type_of_clean, qty: "1", price: "" }]);
+    }
+  }
 
   function updateLine(index: number, field: keyof Line, value: string) {
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, [field]: value } : line)));
@@ -37,29 +110,28 @@ export default function DocumentsPanel({
       <div className="mt-4 space-y-3">
         <div>
           <label className={labelCls} htmlFor="pdf-kind">Document type</label>
-          <select id="pdf-kind" className={inputCls} value={kind} onChange={(e) => setKind(e.target.value as "quote" | "invoice")}>
+          <select
+            id="pdf-kind"
+            className={inputCls}
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value as "quote" | "invoice");
+              setSelectedId("");
+            }}
+          >
             <option value="quote">Quote</option>
             <option value="invoice">Invoice</option>
           </select>
         </div>
         <div>
-          <label className={labelCls} htmlFor="pdf-prefill">Prefill from a job or request</label>
-          <select id="pdf-prefill" className={inputCls} onChange={(e) => {
-            const job = jobs.find((row) => row.id === e.target.value);
-            const req = requests.find((row) => row.id === e.target.value);
-            if (job) {
-              setCustomer(job.customer_name);
-              setAddress(job.address);
-              setLines([{ item: job.type_of_clean, qty: "1", price: job.price != null ? String(job.price) : "" }]);
-            } else if (req) {
-              setCustomer(req.name);
-              setAddress(req.job_address);
-              setLines([{ item: req.type_of_clean, qty: "1", price: "" }]);
-            }
-          }}>
-            <option value="">Choose a job or request</option>
-            {jobs.map((job) => <option key={job.id} value={job.id}>Job: {job.customer_name}</option>)}
-            {requests.map((req) => <option key={req.id} value={req.id}>Request: {req.name}</option>)}
+          <label className={labelCls} htmlFor="pdf-prefill">
+            {kind === "quote" ? "Future job or quote request" : "Accepted job"}
+          </label>
+          <select id="pdf-prefill" className={inputCls} value={selectedId} onChange={(e) => applyPrefill(e.target.value)}>
+            <option value="">{kind === "quote" ? "Choose a future job or request" : "Choose an accepted job"}</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div>
