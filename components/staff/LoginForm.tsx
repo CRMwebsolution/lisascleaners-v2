@@ -17,7 +17,7 @@ async function resolveProfile(accessToken: string, userId: string) {
   });
   const body = (await res.json().catch(() => ({}))) as { profile?: LisaProfile; error?: string };
   if (body.profile) return { profile: body.profile, error: null };
-  return { profile: null, error: body.error || "This login is not set up for the staff portal yet." };
+  return { profile: null, error: body.error || "Signed in, but no lisa_profiles row is tied to this user id." };
 }
 
 export default function LoginForm() {
@@ -27,7 +27,6 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
-  const supabaseHost = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace("https://", "");
 
   useEffect(() => {
     try {
@@ -56,36 +55,40 @@ export default function LoginForm() {
     setError(null);
     setSubmitting(true);
     try {
-      const supabase = getSupabaseBrowser();
-      const { data, error: signError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      if (signError) {
-        const message = signError.message.toLowerCase();
-        if (message.includes("email not confirmed")) {
-          setError("This login exists but the email is not confirmed in Supabase Auth. Open Authentication > Users, select the account, and mark the email confirmed.");
-        } else if (message.includes("invalid") || message.includes("credentials")) {
-          setError("Supabase rejected that password. Do not use the dashboard Recover link. It sends you to carteretlocal.com. Use Forgot password on this page after the redirect URLs are added.");
-        } else {
-          setError(signError.message);
-        }
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string | null;
+        status?: number;
+        project?: string;
+        session?: { access_token: string; refresh_token: string };
+        user?: { id: string; email?: string | null };
+      };
+      if (!res.ok || !body.session) {
+        setError([body.error || "Sign in failed", body.code ? `code ${body.code}` : null, body.project ? `project ${body.project}` : null].filter(Boolean).join(" | "));
         setSubmitting(false);
         return;
       }
-      const userId = data.user?.id ?? data.session?.user.id;
-      const token = data.session?.access_token;
-      if (!userId || !token) {
-        setError("Signed in, but no session came back. Redeploy Vercel after saving NEXT_PUBLIC_ keys. Those keys are baked in at build time.");
+      const supabase = getSupabaseBrowser();
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: body.session.access_token,
+        refresh_token: body.session.refresh_token,
+      });
+      if (sessionError) {
+        setError(`Auth worked, but the browser could not store the session: ${sessionError.message}`);
         setSubmitting(false);
         return;
       }
-      const resolved = await resolveProfile(token, userId);
+      const resolved = await resolveProfile(body.session.access_token, body.user?.id ?? "");
       if (resolved.profile?.role === "admin") router.replace("/admin");
       else if (resolved.profile?.role === "staff") router.replace("/dashboard");
-      else setError(resolved.error || "This login is not set up for the staff portal yet.");
+      else setError(resolved.error || "Signed in, but no staff profile is attached to this user.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not reach Supabase from this site.");
+      setError(err instanceof Error ? err.message : "Could not reach the login API.");
     }
     setSubmitting(false);
   }
@@ -110,8 +113,6 @@ export default function LoginForm() {
           {submitting ? "Signing in..." : "Sign In"}
         </button>
       </form>
-      <Link href="/login/reset" className="mt-4 inline-flex text-sm font-semibold text-purple-mid">Forgot password</Link>
-      <p className="mt-3 text-xs text-purple-mid">Auth project: {supabaseHost || "missing NEXT_PUBLIC_SUPABASE_URL"}</p>
     </div>
   );
 }
