@@ -75,8 +75,8 @@ export async function POST(request: Request) {
     access_token?: string;
   } | null;
 
-  if (!body?.email || !body.password || !body.full_name || !body.role) {
-    return NextResponse.json({ error: "Name, email, password, and role are required." }, { status: 400 });
+  if (!body?.email || !body.full_name || !body.role) {
+    return NextResponse.json({ error: "Name, email, and role are required." }, { status: 400 });
   }
   if (!["admin", "staff"].includes(body.role)) {
     return NextResponse.json({ error: "Role must be admin or staff." }, { status: 400 });
@@ -111,6 +111,9 @@ export async function POST(request: Request) {
   let reused = Boolean(user);
 
   if (!user) {
+    if (!body.password || body.password.length < 6) {
+      return NextResponse.json({ error: "A password of at least 6 characters is required for a new login." }, { status: 400 });
+    }
     const created = await admin.auth.admin.createUser({
       email,
       password: body.password,
@@ -131,11 +134,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not find or create that login." }, { status: 400 });
   }
 
-  await admin.auth.admin.updateUserById(user.id, {
-    password: body.password,
+  const updates: { email_confirm: true; user_metadata: Record<string, string>; password?: string } = {
     email_confirm: true,
     user_metadata: { full_name: body.full_name.trim(), role: body.role },
-  });
+  };
+  if (!reused && body.password) updates.password = body.password;
+  await admin.auth.admin.updateUserById(user.id, updates);
 
   const profileError = await saveProfile(admin, {
     id: user.id,

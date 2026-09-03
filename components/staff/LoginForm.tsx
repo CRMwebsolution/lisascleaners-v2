@@ -6,6 +6,19 @@ import { BUSINESS_NAME } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import type { LisaProfile } from "@/lib/types";
 
+async function resolveProfile(accessToken: string, userId: string) {
+  const supabase = getSupabaseBrowser();
+  const { data } = await supabase.from("lisa_profiles").select("*").eq("id", userId).maybeSingle();
+  if (data) return { profile: data as LisaProfile, error: null };
+  const res = await fetch("/api/ensure-profile", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const body = (await res.json().catch(() => ({}))) as { profile?: LisaProfile; error?: string };
+  if (body.profile) return { profile: body.profile, error: null };
+  return { profile: null, error: body.error || "This login is not set up for the staff portal yet." };
+}
+
 export default function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -15,18 +28,25 @@ export default function LoginForm() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) {
+    try {
+      const supabase = getSupabaseBrowser();
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (!session?.user) {
+          setChecking(false);
+          return;
+        }
+        const resolved = await resolveProfile(session.access_token, session.user.id);
+        if (resolved.profile?.role === "admin") router.replace("/admin");
+        else if (resolved.profile?.role === "staff") router.replace("/dashboard");
         setChecking(false);
-        return;
-      }
-      const { data } = await supabase.from("lisa_profiles").select("*").eq("id", session.user.id).maybeSingle();
-      const profile = data as LisaProfile | null;
-      if (profile?.role === "admin") router.replace("/admin");
-      else if (profile?.role === "staff") router.replace("/dashboard");
+      }).catch((err: Error) => {
+        setError(err.message);
+        setChecking(false);
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login is missing its database keys.");
       setChecking(false);
-    });
+    }
   }, [router]);
 
   async function onSubmit(event: FormEvent) {
@@ -35,31 +55,40 @@ export default function LoginForm() {
     setSubmitting(true);
     try {
       const supabase = getSupabaseBrowser();
-      const { error: signError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: signError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
       if (signError) {
-        setError("Invalid email or password.");
+        const message = signError.message.toLowerCase();
+        if (message.includes("email not confirmed")) {
+          setError("This login exists but the email is not confirmed in Supabase Auth. Open Authentication > Users, select the account, and mark the email confirmed.");
+        } else if (message.includes("invalid") || message.includes("credentials")) {
+          setError("Supabase rejected that password. If you used Add staff on this same email, that form overwrote the old password. Reset it in Supabase Auth > Users.");
+        } else {
+          setError(signError.message);
+        }
         setSubmitting(false);
         return;
       }
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-      if (!userId) {
-        setError("Invalid email or password.");
+      const userId = data.user?.id ?? data.session?.user.id;
+      const token = data.session?.access_token;
+      if (!userId || !token) {
+        setError("Signed in, but no session came back. Check that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set on this site.");
         setSubmitting(false);
         return;
       }
-      const { data } = await supabase.from("lisa_profiles").select("*").eq("id", userId).maybeSingle();
-      const profile = data as LisaProfile | null;
-      if (profile?.role === "admin") router.replace("/admin");
-      else if (profile?.role === "staff") router.replace("/dashboard");
-      else setError("This login is not set up for Lisa’s staff portal yet.");
-    } catch {
-      setError("Invalid email or password.");
+      const resolved = await resolveProfile(token, userId);
+      if (resolved.profile?.role === "admin") router.replace("/admin");
+      else if (resolved.profile?.role === "staff") router.replace("/dashboard");
+      else setError(resolved.error || "This login is not set up for the staff portal yet.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach Supabase from this site.");
     }
     setSubmitting(false);
   }
 
-  if (checking) return <p className="text-sm text-purple-dark">Loading…</p>;
+  if (checking) return <p className="text-sm text-purple-dark">Loading...</p>;
 
   return (
     <div className="w-full max-w-sm rounded-2xl border border-purple-light bg-white p-8">
