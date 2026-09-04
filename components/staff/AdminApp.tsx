@@ -217,8 +217,8 @@ function Jobs({ jobs, profiles, draft, sourceRequest, currentUserId, onClear, on
           {draft ? <button type="button" className="text-sm text-purple-mid" onClick={onClear}>Clear</button> : null}
         </div>
         <input className={inputCls} required placeholder="Customer name" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
-        <input className={inputCls} required placeholder="Phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
-        <input className={inputCls} required type="email" placeholder="Email" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
+        <input className={inputCls} placeholder="Phone (optional)" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
+        <input className={inputCls} type="email" placeholder="Email (optional)" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
         <input className={inputCls} required placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
         <select className={inputCls} value={form.type_of_clean} onChange={(e) => setForm({ ...form, type_of_clean: e.target.value })}>{JOB_SERVICE_TYPES.map((label) => <option key={label}>{label}</option>)}</select>
         <input className={inputCls} type="date" required value={form.job_date} onChange={(e) => setForm({ ...form, job_date: e.target.value })} />
