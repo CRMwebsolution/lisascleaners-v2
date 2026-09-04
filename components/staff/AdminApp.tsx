@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_LISA_BUSINESS_ID, INITIAL_ADMIN_EMAILS, JOB_SERVICE_TYPES } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
-import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile, QuoteRequest, StaffRole } from "@/lib/types";
+import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile, QuoteRequest, RequestStatus, StaffRole } from "@/lib/types";
 import JobCalendar, { type CalView } from "@/components/staff/JobCalendar";
 import JobDetailModal from "@/components/staff/JobDetailModal";
 import ChangePasswordModal from "@/components/staff/ChangePasswordModal";
@@ -24,6 +24,28 @@ function sortJobsNewestFirst(jobs: JobWithAssignments[]) {
     const right = `${b.job_date ?? ""} ${b.job_time ?? ""}`;
     return right.localeCompare(left);
   });
+}
+
+function notesWithoutDecline(notes: string | null | undefined) {
+  return (notes ?? "").replace(/^Decline reason:\s*.+$/m, "").trim();
+}
+
+async function updateRequestStatus(id: string, status: RequestStatus, current: QuoteRequest | undefined, reason?: string) {
+  const supabase = getSupabaseBrowser();
+  const payload: Record<string, unknown> = { status };
+  if (status === "declined") {
+    const cleaned = notesWithoutDecline(current?.notes);
+    const line = reason?.trim() ? `Decline reason: ${reason.trim()}` : "";
+    payload.decline_reason = reason?.trim() || null;
+    payload.notes = [cleaned, line].filter(Boolean).join("\n") || null;
+  }
+  let { error } = await supabase.from("lisa_quote_requests").update(payload).eq("id", id);
+  if (error && /decline_reason/i.test(error.message)) {
+    delete payload.decline_reason;
+    const retry = await supabase.from("lisa_quote_requests").update(payload).eq("id", id);
+    error = retry.error;
+  }
+  return error?.message ?? null;
 }
 
 async function loadJobsWithAssignments() {
@@ -108,9 +130,9 @@ export default function AdminApp() {
       <main className="flex-1 p-4 lg:p-6">
         {error ? <p className="mb-3 rounded-md bg-white p-3 text-sm text-red-700">{error}</p> : null}
         {section === "requests" ? (
-          <QuoteRequestsPanel requests={requests} onStatus={async (id, status) => {
-            const { error: updateError } = await getSupabaseBrowser().from("lisa_quote_requests").update({ status }).eq("id", id);
-            if (updateError) setError(updateError.message); else await load();
+          <QuoteRequestsPanel requests={requests} onStatus={async (id, status, reason) => {
+            const message = await updateRequestStatus(id, status, requests.find((row) => row.id === id), reason);
+            if (message) setError(message); else { setError(null); await load(); }
           }} onCreate={(req) => {
             setSourceRequest(req);
             setDraft({
