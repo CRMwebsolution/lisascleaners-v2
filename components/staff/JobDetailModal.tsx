@@ -8,6 +8,12 @@ import type { JobWithAssignments, LisaProfile } from "@/lib/types";
 
 const inputCls = "w-full rounded-md border border-purple-light px-3 py-2 text-sm";
 
+function cleanText(value: string | null | undefined) {
+  const text = String(value ?? "").trim();
+  if (!text || text.toLowerCase() === "null" || text.toLowerCase() === "undefined") return "";
+  return text;
+}
+
 function whenLabel(job: JobWithAssignments) {
   const date = String(job.job_date ?? "").slice(0, 10);
   const time = job.job_time ? String(job.job_time).slice(0, 8) : "00:00:00";
@@ -37,14 +43,14 @@ export default function JobDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [people, setPeople] = useState<LisaProfile[]>(profiles);
   const [form, setForm] = useState({
-    customer_name: job.customer_name ?? "",
-    customer_phone: job.customer_phone ?? "",
-    customer_email: job.customer_email ?? "",
-    address: job.address ?? "",
+    customer_name: cleanText(job.customer_name),
+    customer_phone: cleanText(job.customer_phone),
+    customer_email: cleanText(job.customer_email),
+    address: cleanText(job.address),
     type_of_clean: job.type_of_clean || JOB_SERVICE_TYPES[0],
     job_date: String(job.job_date ?? "").slice(0, 10),
     job_time: job.job_time ? String(job.job_time).slice(0, 5) : "",
-    notes: job.notes ?? "",
+    notes: cleanText(job.notes),
     price: job.price != null ? String(job.price) : "",
     status: job.status || "scheduled",
     assignee_ids: job.job_assignments.map((row) => row.assignee_id),
@@ -70,6 +76,9 @@ export default function JobDetailModal({
 
   const mine = job.job_assignments.find((row) => row.assignee_id === currentUserId);
   const done = job.status === "completed" || job.job_assignments.some((row) => row.marked_complete_at);
+  const phone = cleanText(job.customer_phone);
+  const email = cleanText(job.customer_email);
+  const visibleNotes = cleanText(job.notes);
 
   async function markComplete() {
     setSaving(true);
@@ -107,14 +116,14 @@ export default function JobDetailModal({
     setError(null);
     const supabase = getSupabaseBrowser();
     const { error: updateError } = await supabase.from("lisa_jobs").update({
-      customer_name: form.customer_name.trim(),
-      customer_phone: form.customer_phone.trim() || null,
-      customer_email: form.customer_email.trim() || null,
-      address: form.address.trim(),
+      customer_name: cleanText(form.customer_name),
+      customer_phone: cleanText(form.customer_phone) || null,
+      customer_email: cleanText(form.customer_email) || null,
+      address: cleanText(form.address),
       type_of_clean: form.type_of_clean,
       job_date: form.job_date,
       job_time: form.job_time.length === 5 ? `${form.job_time}:00` : form.job_time,
-      notes: form.notes.trim() || null,
+      notes: cleanText(form.notes) || null,
       price: form.price ? Number(form.price) : null,
       status: form.status,
     }).eq("id", job.id);
@@ -154,10 +163,10 @@ export default function JobDetailModal({
         </div>
         <div className="space-y-4 overflow-y-auto p-5 text-sm">
           {isAdmin && editing ? (
-            <form onSubmit={saveEdit} className="space-y-3">
+            <form noValidate onSubmit={saveEdit} className="space-y-3">
               <input className={inputCls} required placeholder="Customer name" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
-              <input className={inputCls} placeholder="Phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
-              <input className={inputCls} type="email" placeholder="Email" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
+              <input className={inputCls} placeholder="Phone (optional)" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
+              <input className={inputCls} placeholder="Email (optional)" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
               <input className={inputCls} required placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               <select className={inputCls} value={form.type_of_clean} onChange={(e) => setForm({ ...form, type_of_clean: e.target.value })}>
                 {serviceOptions.map((label) => <option key={label}>{label}</option>)}
@@ -192,10 +201,10 @@ export default function JobDetailModal({
           ) : (
             <>
               <p><span className="text-xs font-semibold uppercase text-gray-500">Date & time</span><br />{whenLabel(job)}</p>
-              {job.customer_phone ? <p><span className="text-xs font-semibold uppercase text-gray-500">Phone</span><br /><a className="text-purple-mid" href={`tel:${job.customer_phone}`}>{job.customer_phone}</a></p> : null}
+              {phone ? <p><span className="text-xs font-semibold uppercase text-gray-500">Phone</span><br /><a className="text-purple-mid" href={`tel:${phone}`}>{phone}</a></p> : null}
               <p><span className="text-xs font-semibold uppercase text-gray-500">Address</span><br />{job.address}</p>
-              {job.customer_email ? <p><span className="text-xs font-semibold uppercase text-gray-500">Email</span><br /><a className="text-purple-mid" href={`mailto:${job.customer_email}`}>{job.customer_email}</a></p> : null}
-              {job.notes ? <p className="whitespace-pre-wrap"><span className="text-xs font-semibold uppercase text-gray-500">Notes</span><br />{job.notes}</p> : null}
+              {email ? <p><span className="text-xs font-semibold uppercase text-gray-500">Email</span><br /><a className="text-purple-mid" href={`mailto:${email}`}>{email}</a></p> : null}
+              {visibleNotes ? <p className="whitespace-pre-wrap"><span className="text-xs font-semibold uppercase text-gray-500">Notes</span><br />{visibleNotes}</p> : null}
               {isAdmin ? <p><span className="text-xs font-semibold uppercase text-gray-500">Price</span><br />{job.price != null ? `$${Number(job.price).toFixed(2)}` : "\u2014"}</p> : null}
               <div>
                 <p className="text-xs font-semibold uppercase text-gray-500">Assigned to</p>
