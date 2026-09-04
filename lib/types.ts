@@ -28,6 +28,7 @@ export interface QuoteRequest {
   notes: string | null;
   consent_at: string | null;
   status: RequestStatus;
+  decline_reason?: string | null;
   created_at: string;
 }
 
