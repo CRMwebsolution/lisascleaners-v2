@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DEFAULT_LISA_BUSINESS_ID, INITIAL_ADMIN_EMAILS, JOB_SERVICE_TYPES } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
@@ -13,6 +13,18 @@ import DocumentsPanel from "@/components/staff/DocumentsPanel";
 
 type Section = "requests" | "calendar" | "jobs" | "staff" | "documents";
 const inputCls = "w-full rounded-md border border-purple-light px-3 py-2 text-sm";
+const emptyJobForm = {
+  customer_name: "",
+  customer_phone: "",
+  customer_email: "",
+  address: "",
+  type_of_clean: JOB_SERVICE_TYPES[0],
+  price: "",
+  job_date: "",
+  job_time: "",
+  notes: "",
+  assignee_ids: [] as string[],
+};
 
 function jobTimeLabel(value: string | null | undefined) {
   return value ? String(value).slice(0, 5) : "";
@@ -28,6 +40,15 @@ function sortJobsNewestFirst(jobs: JobWithAssignments[]) {
 
 function notesWithoutDecline(notes: string | null | undefined) {
   return (notes ?? "").replace(/^Decline reason:\s*.+$/m, "").trim();
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function defaultReassignId(profiles: LisaProfile[], currentUserId: string) {
+  const lisa = profiles.find((person) => person.role === "admin" && person.full_name.trim().toLowerCase() === "lisa");
+  return lisa?.id || currentUserId;
 }
 
 async function updateRequestStatus(id: string, status: RequestStatus, current: QuoteRequest | undefined, reason?: string) {
@@ -80,6 +101,7 @@ export default function AdminApp() {
   const [jobs, setJobs] = useState<JobWithAssignments[]>([]);
   const [profiles, setProfiles] = useState<LisaProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [calDate, setCalDate] = useState(new Date());
   const [calView, setCalView] = useState<CalView>("month");
   const [draft, setDraft] = useState<Partial<JobWithAssignments> | null>(null);
@@ -129,6 +151,7 @@ export default function AdminApp() {
       </aside>
       <main className="flex-1 p-4 lg:p-6">
         {error ? <p className="mb-3 rounded-md bg-white p-3 text-sm text-red-700">{error}</p> : null}
+        {notice ? <p className="mb-3 rounded-md bg-green-50 p-3 text-sm text-green-800">{notice}</p> : null}
         {section === "requests" ? (
           <QuoteRequestsPanel requests={requests} onStatus={async (id, status, reason) => {
             const message = await updateRequestStatus(id, status, requests.find((row) => row.id === id), reason);
@@ -145,11 +168,11 @@ export default function AdminApp() {
           }} />
         ) : null}
         {section === "calendar" ? <JobCalendar jobs={jobs} calDate={calDate} calView={calView} onView={setCalView} onDate={setCalDate} onJobClick={setSelectedJob} /> : null}
-        {section === "jobs" ? <Jobs jobs={jobs} profiles={profiles} draft={draft} sourceRequest={sourceRequest} currentUserId={profile?.id ?? ""} onError={setError} onOpenJob={setSelectedJob} onClear={() => { setDraft(null); setSourceRequest(null); }} onSaved={async () => { setDraft(null); setSourceRequest(null); await load(); }} /> : null}
-        {section === "staff" ? <Staff profiles={profiles} onSaved={load} onError={setError} /> : null}
+        {section === "jobs" ? <Jobs jobs={jobs} profiles={profiles} draft={draft} sourceRequest={sourceRequest} onError={setError} onNotice={setNotice} onOpenJob={setSelectedJob} onClear={() => { setDraft(null); setSourceRequest(null); }} onSaved={async (message) => { setDraft(null); setSourceRequest(null); setNotice(message); await load(); }} /> : null}
+        {section === "staff" ? <Staff profiles={profiles} jobs={jobs} currentUserId={profile?.id ?? ""} onSaved={load} onError={setError} onNotice={setNotice} /> : null}
         {section === "documents" ? <DocumentsPanel jobs={jobs} requests={requests} /> : null}
         {selectedJob ? (
-          <JobDetailModal job={selectedJob} isAdmin currentUserId={profile?.id ?? ""} onClose={() => setSelectedJob(null)} onUpdated={load} />
+          <JobDetailModal job={selectedJob} isAdmin currentUserId={profile?.id ?? ""} onClose={() => setSelectedJob(null)} onUpdated={load} onDeleted={async () => { setSelectedJob(null); setNotice("Job deleted."); await load(); }} />
         ) : null}
         {showPassword ? <ChangePasswordModal onClose={() => setShowPassword(false)} /> : null}
       </main>
@@ -157,19 +180,8 @@ export default function AdminApp() {
   );
 }
 
-function Jobs({ jobs, profiles, draft, sourceRequest, currentUserId, onClear, onSaved, onError, onOpenJob }: { jobs: JobWithAssignments[]; profiles: LisaProfile[]; draft: Partial<JobWithAssignments> | null; sourceRequest: QuoteRequest | null; currentUserId: string; onClear: () => void; onSaved: () => Promise<void>; onError: (message: string | null) => void; onOpenJob: (job: JobWithAssignments) => void }) {
-  const [form, setForm] = useState({
-    customer_name: draft?.customer_name ?? "",
-    customer_phone: draft?.customer_phone ?? "",
-    customer_email: draft?.customer_email ?? "",
-    address: draft?.address ?? "",
-    type_of_clean: draft?.type_of_clean || JOB_SERVICE_TYPES[0],
-    price: draft?.price != null ? String(draft.price) : "",
-    job_date: draft?.job_date ?? "",
-    job_time: draft?.job_time ? String(draft.job_time).slice(0, 5) : "",
-    notes: draft?.notes ?? "",
-    assignee_ids: [] as string[],
-  });
+function Jobs({ jobs, profiles, draft, sourceRequest, onClear, onSaved, onError, onNotice, onOpenJob }: { jobs: JobWithAssignments[]; profiles: LisaProfile[]; draft: Partial<JobWithAssignments> | null; sourceRequest: QuoteRequest | null; onClear: () => void; onSaved: (message: string) => Promise<void>; onError: (message: string | null) => void; onNotice: (message: string | null) => void; onOpenJob: (job: JobWithAssignments) => void }) {
+  const [form, setForm] = useState({ ...emptyJobForm, type_of_clean: draft?.type_of_clean || JOB_SERVICE_TYPES[0], customer_name: draft?.customer_name ?? "", customer_phone: draft?.customer_phone ?? "", customer_email: draft?.customer_email ?? "", address: draft?.address ?? "", job_date: draft?.job_date ?? "", notes: draft?.notes ?? "" });
   useEffect(() => {
     if (!draft) return;
     setForm((prev) => ({ ...prev, customer_name: draft.customer_name ?? "", customer_phone: draft.customer_phone ?? "", customer_email: draft.customer_email ?? "", address: draft.address ?? "", type_of_clean: draft.type_of_clean || prev.type_of_clean, job_date: draft.job_date ?? "", notes: draft.notes ?? "" }));
@@ -197,19 +209,22 @@ function Jobs({ jobs, profiles, draft, sourceRequest, currentUserId, onClear, on
     const { error: assignError } = await supabase.from("lisa_job_assignments").insert(form.assignee_ids.map((assignee_id) => ({ job_id: data.id, assignee_id, business_id })));
     if (assignError) return onError(assignError.message);
     if (sourceRequest?.id) await supabase.from("lisa_quote_requests").update({ status: "booked" }).eq("id", sourceRequest.id);
+    const when = [form.job_date, form.job_time].filter(Boolean).join(" ");
+    setForm({ ...emptyJobForm });
     onError(null);
-    await onSaved();
+    onNotice(null);
+    await onSaved(`Job saved for ${form.customer_name.trim()}${when ? ` on ${when}` : ""}.`);
   }
   return (
     <section className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form onSubmit={save} className="space-y-3 rounded-md bg-white p-4">
+      <form noValidate onSubmit={save} className="space-y-3 rounded-md bg-white p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-purple-dark">{draft ? "Create job from request" : "New job"}</h2>
           {draft ? <button type="button" className="text-sm text-purple-mid" onClick={onClear}>Clear</button> : null}
         </div>
         <input className={inputCls} required placeholder="Customer name" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
         <input className={inputCls} placeholder="Phone (optional)" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
-        <input className={inputCls} type="email" placeholder="Email (optional)" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
+        <input className={inputCls} placeholder="Email (optional)" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
         <input className={inputCls} required placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
         <select className={inputCls} value={form.type_of_clean} onChange={(e) => setForm({ ...form, type_of_clean: e.target.value })}>{JOB_SERVICE_TYPES.map((label) => <option key={label}>{label}</option>)}</select>
         <input className={inputCls} type="date" required value={form.job_date} onChange={(e) => setForm({ ...form, job_date: e.target.value })} />
@@ -248,11 +263,19 @@ function Jobs({ jobs, profiles, draft, sourceRequest, currentUserId, onClear, on
   );
 }
 
-function Staff({ profiles, onSaved, onError }: { profiles: LisaProfile[]; onSaved: () => Promise<void>; onError: (message: string | null) => void }) {
+function Staff({ profiles, jobs, currentUserId, onSaved, onError, onNotice }: { profiles: LisaProfile[]; jobs: JobWithAssignments[]; currentUserId: string; onSaved: () => Promise<void>; onError: (message: string | null) => void; onNotice: (message: string | null) => void }) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<StaffRole>("staff");
   const [password, setPassword] = useState("");
+  const [pending, setPending] = useState<LisaProfile | null>(null);
+  const fallback = defaultReassignId(profiles, currentUserId);
+  const [reassignTo, setReassignTo] = useState(fallback);
+  const futureForPending = useMemo(() => {
+    if (!pending) return [];
+    const today = todayIso();
+    return jobs.filter((job) => job.job_date >= today && job.status !== "cancelled" && job.job_assignments.some((row) => row.assignee_id === pending.id));
+  }, [jobs, pending]);
   async function addPerson(event: FormEvent) {
     event.preventDefault();
     const { data: sessionData } = await getSupabaseBrowser().auth.getSession();
@@ -264,11 +287,27 @@ function Staff({ profiles, onSaved, onError }: { profiles: LisaProfile[]; onSave
     });
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) return onError(body.error || "Could not add staff.");
-    setEmail(""); setFullName(""); setPassword(""); onError(null); await onSaved();
+    setEmail(""); setFullName(""); setPassword(""); onError(null); onNotice(`${fullName} added.`); await onSaved();
   }
   async function changeRole(id: string, nextRole: StaffRole) {
     const { error } = await getSupabaseBrowser().from("lisa_profiles").update({ role: nextRole }).eq("id", id);
     if (error) onError(error.message); else await onSaved();
+  }
+  async function confirmDelete() {
+    if (!pending) return;
+    const { data: sessionData } = await getSupabaseBrowser().auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    const res = await fetch("/api/staff", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+      body: JSON.stringify({ id: pending.id, reassign_to: reassignTo, access_token: accessToken }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { error?: string; reassigned?: number };
+    if (!res.ok) return onError(body.error || "Could not delete staff.");
+    onError(null);
+    onNotice(futureForPending.length ? `${pending.full_name} deleted. ${futureForPending.length} future job(s) moved.` : `${pending.full_name} deleted.`);
+    setPending(null);
+    await onSaved();
   }
   return (
     <section>
@@ -285,13 +324,47 @@ function Staff({ profiles, onSaved, onError }: { profiles: LisaProfile[]; onSave
         {profiles.map((person) => (
           <li key={person.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white p-3 text-sm">
             <span>{person.full_name} {person.email ? `· ${person.email}` : ""}</span>
-            <select className="rounded-md border border-purple-light px-2 py-1" value={person.role} onChange={(e) => changeRole(person.id, e.target.value as StaffRole)}>
-              <option value="admin">admin</option>
-              <option value="staff">staff</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <select className="rounded-md border border-purple-light px-2 py-1" value={person.role} onChange={(e) => changeRole(person.id, e.target.value as StaffRole)}>
+                <option value="admin">admin</option>
+                <option value="staff">staff</option>
+              </select>
+              {person.id !== currentUserId ? (
+                <button type="button" className="tap rounded-md px-2 py-1 text-red-700" onClick={() => { setPending(person); setReassignTo(defaultReassignId(profiles, currentUserId)); }}>Delete</button>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>
+      {pending ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5">
+            <h2 className="text-lg font-semibold text-purple-dark">Delete {pending.full_name}?</h2>
+            {futureForPending.length ? (
+              <>
+                <p className="mt-2 text-sm">This person has {futureForPending.length} future job(s). Reassign them before deleting.</p>
+                <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-sm">
+                  {futureForPending.map((job) => (
+                    <li key={job.id}>{job.job_date} {jobTimeLabel(job.job_time)} · {job.customer_name}</li>
+                  ))}
+                </ul>
+                <label className="mt-3 block text-sm font-semibold text-purple-dark" htmlFor="reassign-to">Move jobs to</label>
+                <select id="reassign-to" className={inputCls} value={reassignTo} onChange={(e) => setReassignTo(e.target.value)}>
+                  {profiles.filter((person) => person.id !== pending.id).map((person) => (
+                    <option key={person.id} value={person.id}>{person.full_name} ({person.role})</option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <p className="mt-2 text-sm">No future jobs are assigned to this person.</p>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button type="button" className="tap flex-1 rounded-md bg-gray-100 py-2" onClick={() => setPending(null)}>Cancel</button>
+              <button type="button" className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white" onClick={() => void confirmDelete()}>Delete</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
