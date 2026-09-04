@@ -179,7 +179,7 @@ function Jobs({ jobs, profiles, draft, sourceRequest, currentUserId, onClear, on
     if (form.assignee_ids.length === 0) return onError("Assign at least one person.");
     const supabase = getSupabaseBrowser();
     const business_id = process.env.NEXT_PUBLIC_LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
-    const payload: Record<string, unknown> = {
+    const payload = {
       business_id,
       customer_name: form.customer_name.trim(),
       customer_phone: form.customer_phone.trim() || null,
@@ -192,16 +192,7 @@ function Jobs({ jobs, profiles, draft, sourceRequest, currentUserId, onClear, on
       notes: form.notes.trim() || null,
       status: "scheduled",
     };
-    if (sourceRequest?.id) payload.source_request_id = sourceRequest.id;
-    if (currentUserId) payload.created_by = currentUserId;
-    let { data, error } = await supabase.from("lisa_jobs").insert(payload).select("id").single();
-    if (error && /source_request_id|created_by/i.test(error.message)) {
-      delete payload.source_request_id;
-      delete payload.created_by;
-      const retry = await supabase.from("lisa_jobs").insert(payload).select("id").single();
-      data = retry.data;
-      error = retry.error;
-    }
+    const { data, error } = await supabase.from("lisa_jobs").insert(payload).select("id").single();
     if (error || !data) return onError(error?.message ?? "Could not create job.");
     const { error: assignError } = await supabase.from("lisa_job_assignments").insert(form.assignee_ids.map((assignee_id) => ({ job_id: data.id, assignee_id, business_id })));
     if (assignError) return onError(assignError.message);
