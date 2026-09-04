@@ -49,7 +49,10 @@ function JobChip({ job, onClick }: { job: JobWithAssignments; onClick: () => voi
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
       className={`w-full truncate rounded border px-1.5 py-0.5 text-left text-xs font-medium hover:opacity-80 ${getServiceColor(job.type_of_clean)}`}
     >
       {when ? format(when, "h:mma") : ""} {job.customer_name}
@@ -85,6 +88,11 @@ export default function JobCalendar({
     else onDate(dir === 1 ? addDays(calDate, 1) : subDays(calDate, 1));
   }
 
+  function openDay(day: Date) {
+    onDate(day);
+    onView("day");
+  }
+
   const days = useMemo(() => {
     if (calView === "day") return [calDate];
     if (calView === "week") return Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(calDate), i));
@@ -118,17 +126,22 @@ export default function JobCalendar({
                   const dayJobs = jobsOnDay(jobs, day);
                   const outside = calView === "month" && !isSameMonth(day, calDate);
                   return (
-                    <div key={day.toISOString()} className={`min-h-24 border-b border-r border-gray-100 p-1.5 ${outside ? "bg-gray-50" : ""}`}>
-                      <button type="button" onClick={() => onDate(day)} className={`mb-1 flex h-7 w-7 items-center justify-center rounded-full text-sm ${isSameDay(day, new Date()) ? "bg-purple-mid font-semibold text-white" : outside ? "text-gray-400" : "text-gray-900"}`}>
+                    <button
+                      type="button"
+                      key={day.toISOString()}
+                      onClick={() => openDay(day)}
+                      className={`min-h-24 border-b border-r border-gray-100 p-1.5 text-left hover:bg-purple-soft/60 ${outside ? "bg-gray-50" : ""}`}
+                    >
+                      <span className={`mb-1 flex h-7 w-7 items-center justify-center rounded-full text-sm ${isSameDay(day, new Date()) ? "bg-purple-mid font-semibold text-white" : outside ? "text-gray-400" : "text-gray-900"}`}>
                         {format(day, "d")}
-                      </button>
+                      </span>
                       <div className="space-y-0.5">
                         {(calView === "month" ? dayJobs.slice(0, 3) : dayJobs).map((job) => (
                           <JobChip key={job.id} job={job} onClick={() => onJobClick(job)} />
                         ))}
-                        {calView === "month" && dayJobs.length > 3 ? <p className="pl-1 text-xs text-gray-500">+{dayJobs.length - 3} more</p> : null}
+                        {calView === "month" && dayJobs.length > 3 ? <p className="pl-1 text-xs text-purple-mid">+{dayJobs.length - 3} more</p> : null}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
