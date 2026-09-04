@@ -29,6 +29,7 @@ export default function JobDetailModal({
   profiles = [],
   onClose,
   onUpdated,
+  onDeleted,
 }: {
   job: JobWithAssignments;
   isAdmin: boolean;
@@ -36,12 +37,14 @@ export default function JobDetailModal({
   profiles?: LisaProfile[];
   onClose: () => void;
   onUpdated: () => Promise<void> | void;
+  onDeleted?: () => Promise<void> | void;
 }) {
   const [editing, setEditing] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [people, setPeople] = useState<LisaProfile[]>(profiles);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [form, setForm] = useState({
     customer_name: cleanText(job.customer_name),
     customer_phone: cleanText(job.customer_phone),
@@ -108,6 +111,17 @@ export default function JobDetailModal({
     await onUpdated();
     onClose();
     setSaving(false);
+  }
+
+  async function deleteJob() {
+    setSaving(true);
+    setError(null);
+    const supabase = getSupabaseBrowser();
+    await supabase.from("lisa_job_assignments").delete().eq("job_id", job.id);
+    const { error: deleteError } = await supabase.from("lisa_jobs").delete().eq("id", job.id);
+    if (deleteError) { setError(deleteError.message); setSaving(false); return; }
+    setSaving(false);
+    await (onDeleted ? onDeleted() : onUpdated());
   }
 
   async function saveEdit(event: FormEvent) {
@@ -222,11 +236,22 @@ export default function JobDetailModal({
                 </div>
               ) : null}
               {isAdmin ? (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-gray-100 pt-4 space-y-2">
                   {job.status !== "completed" ? (
                     <button type="button" className="tap w-full rounded-md bg-green-600 py-2 font-semibold text-white" disabled={saving} onClick={markComplete}>{saving ? "Saving\u2026" : "Mark Job as Complete"}</button>
                   ) : (
                     <button type="button" className="tap w-full rounded-md bg-gray-100 py-2 font-semibold text-gray-700" disabled={saving} onClick={reopen}>{saving ? "Reopening\u2026" : "Reopen Job"}</button>
+                  )}
+                  {confirmDelete ? (
+                    <div className="rounded-md bg-red-50 p-3">
+                      <p className="mb-2">Delete this job? This cannot be undone.</p>
+                      <div className="flex gap-2">
+                        <button type="button" className="tap flex-1 rounded-md bg-white py-2" onClick={() => setConfirmDelete(false)}>Keep job</button>
+                        <button type="button" className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white" disabled={saving} onClick={() => void deleteJob()}>{saving ? "Deleting\u2026" : "Delete job"}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" className="tap w-full rounded-md bg-white py-2 font-semibold text-red-700" onClick={() => setConfirmDelete(true)}>Delete job</button>
                   )}
                 </div>
               ) : null}
