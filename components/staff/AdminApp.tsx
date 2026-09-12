@@ -1,55 +1,22 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DEFAULT_LISA_BUSINESS_ID, INITIAL_ADMIN_EMAILS, JOB_SERVICE_TYPES } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
-import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile, QuoteRequest, RequestStatus, StaffRole } from "@/lib/types";
+import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile, QuoteRequest, RequestStatus } from "@/lib/types";
 import JobCalendar, { type CalView } from "@/components/staff/JobCalendar";
 import JobDetailModal from "@/components/staff/JobDetailModal";
 import ChangePasswordModal from "@/components/staff/ChangePasswordModal";
 import QuoteRequestsPanel from "@/components/staff/QuoteRequestsPanel";
 import DocumentsPanel from "@/components/staff/DocumentsPanel";
 import GalleryPanel from "@/components/staff/GalleryPanel";
+import Jobs from "@/components/staff/JobsPanel";
+import Staff from "@/components/staff/StaffPanel";
 
 type Section = "requests" | "calendar" | "jobs" | "staff" | "documents" | "gallery";
-const inputCls = "w-full rounded-md border border-purple-light px-3 py-2 text-sm";
-const emptyJobForm = {
-  customer_name: "",
-  customer_phone: "",
-  customer_email: "",
-  address: "",
-  type_of_clean: JOB_SERVICE_TYPES[0],
-  price: "",
-  job_date: "",
-  job_time: "",
-  notes: "",
-  assignee_ids: [] as string[],
-};
-
-function jobTimeLabel(value: string | null | undefined) {
-  return value ? String(value).slice(0, 5) : "";
-}
-
-function sortJobsNewestFirst(jobs: JobWithAssignments[]) {
-  return [...jobs].sort((a, b) => {
-    const left = `${a.job_date ?? ""} ${a.job_time ?? ""}`;
-    const right = `${b.job_date ?? ""} ${b.job_time ?? ""}`;
-    return right.localeCompare(left);
-  });
-}
 
 function notesWithoutDecline(notes: string | null | undefined) {
   return (notes ?? "").replace(/^Decline reason:\s*.+$/m, "").trim();
-}
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function defaultReassignId(profiles: LisaProfile[], currentUserId: string) {
-  const lisa = profiles.find((person) => person.role === "admin" && person.full_name.trim().toLowerCase() === "lisa");
-  return lisa?.id || currentUserId;
 }
 
 async function updateRequestStatus(id: string, status: RequestStatus, current: QuoteRequest | undefined, reason?: string) {
