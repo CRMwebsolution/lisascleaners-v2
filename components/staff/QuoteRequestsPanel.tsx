@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import type { QuoteRequest, RequestStatus } from "@/lib/types";
 
 function cleanText(value: string | null | undefined) {
@@ -30,6 +31,9 @@ export default function QuoteRequestsPanel({
   const [decliningId, setDecliningId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [pendingDelete, setPendingDelete] = useState<QuoteRequest | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   function startDecline(req: QuoteRequest) {
     setDecliningId(req.id);
@@ -41,12 +45,31 @@ export default function QuoteRequestsPanel({
     void onStatus(id, "declined", cleanText(reason) || undefined);
   }
 
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setBusy(true);
+    setError(null);
+    const id = pendingDelete.id;
+    const { error: deleteError } = await getSupabaseBrowser().from("lisa_quote_requests").delete().eq("id", id);
+    setBusy(false);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    setHiddenIds((prev) => [...prev, id]);
+    setPendingDelete(null);
+    await onDelete?.(id);
+  }
+
+  const visible = requests.filter((req) => !hiddenIds.includes(req.id));
+
   return (
     <section>
       <h1 className="text-2xl font-bold text-purple-dark">Quote requests</h1>
+      {error ? <p className="mt-3 rounded-md bg-white p-3 text-sm text-red-700">{error}</p> : null}
       <ul className="mt-4 space-y-3">
-        {requests.length === 0 ? <li className="rounded-md bg-white p-4 text-sm">No requests yet.</li> : null}
-        {requests.map((req) => {
+        {visible.length === 0 ? <li className="rounded-md bg-white p-4 text-sm">No requests yet.</li> : null}
+        {visible.map((req) => {
           const savedReason = declineReasonFrom(req);
           const isDeclining = decliningId === req.id;
           const visibleNotes = cleanText((req.notes ?? "").replace(/^Decline reason:\s*.+$/m, ""));
@@ -85,9 +108,7 @@ export default function QuoteRequestsPanel({
                 >
                   declined
                 </button>
-                {onDelete ? (
-                  <button type="button" className="tap rounded-md px-3 text-sm text-red-700" onClick={() => setPendingDelete(req)}>Delete</button>
-                ) : null}
+                <button type="button" className="tap rounded-md px-3 text-sm text-red-700" onClick={() => setPendingDelete(req)}>Delete</button>
               </div>
               {isDeclining ? (
                 <div className="mt-3 rounded-md border border-purple-light p-3">
@@ -118,17 +139,7 @@ export default function QuoteRequestsPanel({
             <p className="mt-1 text-sm text-gray-600">This removes the quote request. It does not delete a job if one was already created.</p>
             <div className="mt-4 flex gap-2">
               <button type="button" className="tap flex-1 rounded-md bg-gray-100 py-2" onClick={() => setPendingDelete(null)}>Keep request</button>
-              <button
-                type="button"
-                className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white"
-                onClick={() => {
-                  const id = pendingDelete.id;
-                  setPendingDelete(null);
-                  void onDelete?.(id);
-                }}
-              >
-                Delete request
-              </button>
+              <button type="button" className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white" disabled={busy} onClick={() => void confirmDelete()}>{busy ? "Deleting\u2026" : "Delete request"}</button>
             </div>
           </div>
         </div>
