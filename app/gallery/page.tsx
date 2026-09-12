@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import QuoteBand from "@/components/QuoteBand";
-import { GALLERY_PHOTOS } from "@/lib/publicCopy";
+import { galleryDisplayItems, loadGalleryItems, publicObjectUrl } from "@/lib/gallery";
 import { CTA_LABEL } from "@/lib/site";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: `Cleaning Job Photos in Newport and Nearby Coastal Towns`,
@@ -10,7 +12,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/gallery" },
 };
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
+  const items = galleryDisplayItems(await loadGalleryItems());
   return (
     <main id="main">
       <div className="bg-purple-soft">
@@ -20,12 +23,21 @@ export default function GalleryPage() {
         </div>
       </div>
       <ul className="mx-auto grid max-w-6xl gap-4 px-4 py-16 sm:grid-cols-2">
-        {GALLERY_PHOTOS.map((photo) => (
-          <li key={photo.url}>
+        {items.map((item) => (
+          <li key={item.id}>
             <figure className="overflow-hidden rounded-2xl bg-cream">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt={photo.alt} className="aspect-[4/3] w-full object-cover" />
-              <figcaption className="p-3 text-sm text-purple-dark">{photo.alt}</figcaption>
+              <div className={item.after_path ? "grid grid-cols-2" : ""}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={publicObjectUrl(item.path)} alt={item.alt} className="aspect-[4/3] w-full object-cover" />
+                {item.after_path ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={publicObjectUrl(item.after_path)} alt={`${item.alt} after`} className="aspect-[4/3] w-full object-cover" />
+                ) : null}
+              </div>
+              <figcaption className="p-3 text-sm text-purple-dark">
+                {item.after_path ? "Before and after. " : ""}
+                {item.caption || item.alt}
+              </figcaption>
             </figure>
           </li>
         ))}
