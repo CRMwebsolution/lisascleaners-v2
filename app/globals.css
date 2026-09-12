@@ -27,12 +27,22 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
   background: var(--white);
   color: var(--ink);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+img,
+iframe,
+video,
+svg {
+  max-width: 100%;
 }
 
 h1,
@@ -52,7 +62,6 @@ textarea:focus-visible {
 
 .tap {
   min-height: 44px;
-  min-width: 44px;
 }
 
 .card-lift {
