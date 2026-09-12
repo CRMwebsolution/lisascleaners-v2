@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { GALLERY_BUCKET, SITE_IMAGE_OPTIONS, publicObjectUrl, type GalleryItem, type GalleryKind } from "@/lib/gallery";
 
@@ -140,14 +141,12 @@ export default function GalleryPanel() {
             {gallery.length === 0 ? <li className="rounded-md bg-white p-3 text-sm">No gallery photos yet.</li> : null}
             {gallery.map((item) => (
               <li key={item.id} className="rounded-md bg-white p-3 text-sm">
-                <div className={item.after_path ? "grid grid-cols-2 gap-2" : ""}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                {item.after_path ? (
+                  <BeforeAfterSlider beforeUrl={publicObjectUrl(item.path)} afterUrl={publicObjectUrl(item.after_path)} alt={item.alt || "Before and after"} />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={publicObjectUrl(item.path)} alt={item.alt} className="aspect-[4/3] w-full rounded object-cover" />
-                  {item.after_path ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={publicObjectUrl(item.after_path)} alt={`${item.alt} after`} className="aspect-[4/3] w-full rounded object-cover" />
-                  ) : null}
-                </div>
+                )}
                 <p className="mt-2">{item.caption || item.alt || "Gallery photo"}</p>
                 <button type="button" className="mt-1 text-red-700" onClick={() => void remove(item.id)}>Delete</button>
               </li>
