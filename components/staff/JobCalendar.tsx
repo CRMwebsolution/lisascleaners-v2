@@ -44,6 +44,13 @@ function jobsOnDay(jobs: JobWithAssignments[], day: Date) {
     .sort((a, b) => String(a.job_time ?? "").localeCompare(String(b.job_time ?? "")));
 }
 
+function assigneeNames(job: JobWithAssignments) {
+  return job.job_assignments
+    .map((row) => row.profile?.full_name)
+    .filter(Boolean)
+    .join(", ");
+}
+
 function JobChip({ job, onClick }: { job: JobWithAssignments; onClick: () => void }) {
   const when = jobDateTime(job);
   return (
@@ -151,6 +158,7 @@ export default function JobCalendar({
               {jobsOnDay(jobs, calDate).length === 0 ? <p className="py-12 text-center text-gray-400">No jobs scheduled</p> : null}
               {jobsOnDay(jobs, calDate).map((job) => {
                 const when = jobDateTime(job);
+                const names = assigneeNames(job);
                 return (
                   <button key={job.id} type="button" onClick={() => onJobClick(job)} className={`w-full rounded-xl border-2 p-4 text-left hover:shadow-md ${getServiceColor(job.type_of_clean)}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -158,6 +166,7 @@ export default function JobCalendar({
                         <p className="font-semibold">{job.customer_name}</p>
                         <p className="mt-0.5 text-sm opacity-80">{job.address}</p>
                         <p className="mt-0.5 text-sm opacity-70">{job.type_of_clean}</p>
+                        {names ? <p className="mt-1 text-sm font-medium">Assigned: {names}</p> : null}
                       </div>
                       <span className="whitespace-nowrap text-sm font-medium">{when ? format(when, "h:mm a") : ""}</span>
                     </div>

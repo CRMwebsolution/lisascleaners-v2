@@ -3,6 +3,15 @@ import BrandMark from "@/components/BrandMark";
 import { ADDRESS_LINE, BUSINESS_NAME, CTA_LABEL, EMAIL, HOURS_WEEKDAY, HOURS_WEEKEND, NAV_LINKS, PHONE_DISPLAY, PHONE_TEL, TOWNS } from "@/lib/site";
 import { LOCAL_LINE } from "@/lib/publicCopy";
 
+function KeyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="8" cy="12" r="3.2" />
+      <path d="M11 12h9v3M16 12v3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function Footer() {
   return (
     <footer className="border-t border-purple-light bg-purple-dark text-white">
@@ -23,7 +32,7 @@ export default function Footer() {
           <p className="mt-2 text-sm text-white/80">{HOURS_WEEKDAY}</p>
           <p className="mt-1 text-sm text-white/80">{HOURS_WEEKEND}</p>
           <p className="mt-3 text-sm font-semibold uppercase tracking-wide text-sand">Towns</p>
-          <p className="mt-2 text-sm text-white/80">{TOWNS.join(" \u00b7 ")}</p>
+          <p className="mt-2 text-sm text-white/80">{TOWNS.join(" · ")}</p>
         </div>
         <nav aria-label="Footer">
           <p className="text-sm font-semibold uppercase tracking-wide text-sand">Explore</p>
@@ -36,7 +45,9 @@ export default function Footer() {
         </nav>
       </div>
       <div className="mx-auto flex max-w-6xl justify-end px-4 pb-4">
-        <Link href="/login" className="text-white opacity-20 hover:opacity-60" aria-label="Staff login">\u25cf</Link>
+        <Link href="/login" className="text-white opacity-20 hover:opacity-60" aria-label="Staff login">
+          <KeyIcon />
+        </Link>
       </div>
     </footer>
   );

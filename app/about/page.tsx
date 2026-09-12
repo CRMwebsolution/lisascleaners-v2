@@ -19,17 +19,13 @@ export default async function AboutPage() {
   return (
     <main id="main">
       <div className="bg-purple-soft">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center">
+        <div className={`mx-auto grid max-w-6xl gap-10 px-4 py-16 ${about.url ? "lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center" : ""}`}>
           {about.url ? (
             <div className="overflow-hidden rounded-2xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={about.url} alt={about.alt} className="aspect-[4/5] w-full object-cover" />
             </div>
-          ) : (
-            <div className="flex aspect-[4/5] items-end rounded-2xl bg-cream p-6">
-              <p className="text-sm text-purple-dark">A photo of Lisa will go here. Until then, this is a local, owner-run service from Newport.</p>
-            </div>
-          )}
+          ) : null}
           <div>
             <h1 className="font-display text-4xl font-semibold text-purple-dark sm:text-5xl">About {BUSINESS_NAME}</h1>
             <p className="mt-4 max-w-2xl text-lg">I’m Lisa. I run {BUSINESS_NAME} from {ADDRESS_LINE}. I clean homes, offices, and vacation rentals in {TOWNS.slice(0, -1).join(", ")}, and {TOWNS[TOWNS.length - 1]}.</p>

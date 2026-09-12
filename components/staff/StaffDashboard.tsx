@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
-import type { JobAssignment, JobWithAssignments, LisaJob, LisaProfile } from "@/lib/types";
+import type { JobWithAssignments, LisaProfile } from "@/lib/types";
 import JobCalendar, { type CalView } from "@/components/staff/JobCalendar";
 import JobDetailModal from "@/components/staff/JobDetailModal";
 import ChangePasswordModal from "@/components/staff/ChangePasswordModal";
@@ -18,54 +18,35 @@ export default function StaffDashboard() {
   const [selectedJob, setSelectedJob] = useState<JobWithAssignments | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const load = useCallback(async (userId: string) => {
-    const supabase = getSupabaseBrowser();
-    const [{ data: jobRows }, { data: assignmentRows }, { data: people }] = await Promise.all([
-      supabase.from("lisa_jobs").select("*").order("job_date", { ascending: false }),
-      supabase.from("lisa_job_assignments").select("*"),
-      supabase.from("lisa_profiles").select("*"),
-    ]);
-    const byId = new Map(((people as LisaProfile[]) ?? []).map((person) => [person.id, person]));
-    const grouped = new Map<string, JobAssignment[]>();
-    for (const raw of assignmentRows ?? []) {
-      const row = raw as JobAssignment;
-      const list = grouped.get(row.job_id) ?? [];
-      list.push({ ...row, profile: byId.get(row.assignee_id) ?? null });
-      grouped.set(row.job_id, list);
+  const load = useCallback(async () => {
+    const { data } = await getSupabaseBrowser().auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) {
+      router.replace("/login");
+      return;
     }
-    const rows = ((jobRows as LisaJob[]) ?? [])
-      .map((job) => ({ ...job, job_assignments: grouped.get(job.id) ?? [] }))
-      .filter((job) => job.job_assignments.some((assignment) => assignment.assignee_id === userId));
-    setJobs(rows);
-  }, []);
+    const res = await fetch("/api/my-schedule", { headers: { Authorization: `Bearer ${token}` } });
+    const body = (await res.json().catch(() => ({}))) as { jobs?: JobWithAssignments[]; profile?: LisaProfile; error?: string };
+    if (!res.ok) {
+      router.replace("/login");
+      return;
+    }
+    if (body.profile?.role === "admin") {
+      router.replace("/admin");
+      return;
+    }
+    setProfile(body.profile ?? null);
+    setJobs(body.jobs ?? []);
+  }, [router]);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowser();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) {
-        router.replace("/login");
-        return;
-      }
-      const { data } = await supabase.from("lisa_profiles").select("*").eq("id", session.user.id).maybeSingle();
-      const next = data as LisaProfile | null;
-      if (next?.role === "admin") {
-        router.replace("/admin");
-        return;
-      }
-      if (next?.role !== "staff") {
-        router.replace("/login");
-        return;
-      }
-      setProfile(next);
-      await load(next.id);
-      setReady(true);
-    });
-  }, [load, router]);
+    load().finally(() => setReady(true));
+  }, [load]);
 
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-purple-soft">
-        <p>Loading dashboard\u2026</p>
+        <p>Loading dashboard...</p>
       </div>
     );
   }
@@ -108,7 +89,7 @@ export default function StaffDashboard() {
           isAdmin={false}
           currentUserId={profile?.id ?? ""}
           onClose={() => setSelectedJob(null)}
-          onUpdated={() => profile && load(profile.id)}
+          onUpdated={() => load()}
         />
       ) : null}
     </main>
