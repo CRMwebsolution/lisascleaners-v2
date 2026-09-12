@@ -44,7 +44,7 @@ export default function Footer() {
           </ul>
         </nav>
       </div>
-      <div className="mx-auto flex max-w-6xl justify-end px-4 pb-6">
+      <div className="mx-auto flex max-w-6xl justify-end px-4 pb-28 lg:pb-6">
         <Link
           href="/login"
           className="tap inline-flex items-center justify-center rounded-full bg-white/15 p-2 text-sand hover:bg-white/25 hover:text-white"
