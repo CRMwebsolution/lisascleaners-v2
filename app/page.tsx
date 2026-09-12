@@ -6,8 +6,11 @@ import HeroHeadline from "@/components/HeroHeadline";
 import QuoteBand from "@/components/QuoteBand";
 import ServiceCards from "@/components/ServiceCards";
 import WhyLisa from "@/components/WhyLisa";
+import { loadGalleryItems, siteImageFrom } from "@/lib/gallery";
 import { HERO_IMAGE, HERO_IMAGE_ALT, HERO_LEDE, LOCAL_LINE, META_IMAGE, META_IMAGE_ALT, QUOTE_REASSURANCE, TRUST_MARKERS } from "@/lib/publicCopy";
 import { BUSINESS_NAME, CTA_LABEL, PHONE_DISPLAY, PHONE_TEL } from "@/lib/site";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: `House, Office & Vacation Rental Cleaning in Newport, NC | ${BUSINESS_NAME}`,
@@ -25,7 +28,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const hero = siteImageFrom(await loadGalleryItems(), "hero", HERO_IMAGE, HERO_IMAGE_ALT);
   return (
     <main id="main">
       <section className="grid min-h-[78vh] bg-purple-dark lg:grid-cols-2">
@@ -48,7 +52,7 @@ export default function HomePage() {
         </div>
         <div className="relative min-h-[280px] bg-purple-soft">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={HERO_IMAGE} alt={HERO_IMAGE_ALT} className="absolute inset-0 h-full w-full object-cover object-center" />
+          <img src={hero.url} alt={hero.alt} className="absolute inset-0 h-full w-full object-cover object-center" />
         </div>
       </section>
       <section className="bg-white">
