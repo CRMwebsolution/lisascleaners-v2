@@ -168,3 +168,25 @@ export async function POST(request: Request) {
   }
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !anon) return fail("Missing Supabase env", 500);
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+  if (!token) return fail("Sign in as an admin and try again.", 401);
+  if (!service) return fail("Add SUPABASE_SERVICE_ROLE_KEY to Vercel env, then redeploy.", 501);
+  const authed = createClient(supabaseUrl, anon, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  const { data: userData, error: userError } = await authed.auth.getUser(token);
+  if (userError || !userData.user) return fail("Session expired. Sign in again.", 401);
+  const admin = createClient(supabaseUrl, service);
+  const { data: actor } = await admin.from("lisa_profiles").select("role").eq("id", userData.user.id).maybeSingle();
+  if (actor?.role !== "admin") return fail("Admin only.", 403);
+  const body = (await request.json().catch(() => null)) as { id?: string } | null;
+  if (!body?.id) return fail("Request id is required.");
+  const removed = await admin.from("lisa_quote_requests").delete().eq("id", body.id).select("id");
+  if (removed.error) return fail(removed.error.message);
+  if (!removed.data?.length) return fail("That request was not deleted. Check the table policies or try again.", 400);
+  return NextResponse.json({ ok: true });
+}

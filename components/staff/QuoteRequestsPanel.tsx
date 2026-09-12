@@ -50,10 +50,19 @@ export default function QuoteRequestsPanel({
     setBusy(true);
     setError(null);
     const id = pendingDelete.id;
-    const { error: deleteError } = await getSupabaseBrowser().from("lisa_quote_requests").delete().eq("id", id);
+    const { data } = await getSupabaseBrowser().auth.getSession();
+    const res = await fetch("/api/quote", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${data.session?.access_token ?? ""}`,
+      },
+      body: JSON.stringify({ id }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
     setBusy(false);
-    if (deleteError) {
-      setError(deleteError.message);
+    if (!res.ok) {
+      setError(body.error || "Could not delete that request.");
       return;
     }
     setHiddenIds((prev) => [...prev, id]);
@@ -139,7 +148,7 @@ export default function QuoteRequestsPanel({
             <p className="mt-1 text-sm text-gray-600">This removes the quote request. It does not delete a job if one was already created.</p>
             <div className="mt-4 flex gap-2">
               <button type="button" className="tap flex-1 rounded-md bg-gray-100 py-2" onClick={() => setPendingDelete(null)}>Keep request</button>
-              <button type="button" className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white" disabled={busy} onClick={() => void confirmDelete()}>{busy ? "Deleting\u2026" : "Delete request"}</button>
+              <button type="button" className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white" disabled={busy} onClick={() => void confirmDelete()}>{busy ? "Deleting..." : "Delete request"}</button>
             </div>
           </div>
         </div>
