@@ -10,8 +10,9 @@ import JobDetailModal from "@/components/staff/JobDetailModal";
 import ChangePasswordModal from "@/components/staff/ChangePasswordModal";
 import QuoteRequestsPanel from "@/components/staff/QuoteRequestsPanel";
 import DocumentsPanel from "@/components/staff/DocumentsPanel";
+import GalleryPanel from "@/components/staff/GalleryPanel";
 
-type Section = "requests" | "calendar" | "jobs" | "staff" | "documents";
+type Section = "requests" | "calendar" | "jobs" | "staff" | "documents" | "gallery";
 const inputCls = "w-full rounded-md border border-purple-light px-3 py-2 text-sm";
 const emptyJobForm = {
   customer_name: "",
@@ -142,7 +143,7 @@ export default function AdminApp() {
         <p className="text-sm font-semibold text-purple-dark">Lisa admin</p>
         <p className="text-xs text-purple-mid">{profile?.full_name}</p>
         <nav className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-1">
-          {(["requests", "calendar", "jobs", "staff", "documents"] as Section[]).map((id) => (
+          {(["requests", "calendar", "jobs", "staff", "documents", "gallery"] as Section[]).map((id) => (
             <button key={id} type="button" onClick={() => setSection(id)} className={`tap rounded-md px-3 text-left text-sm capitalize ${section === id ? "bg-purple-mid text-white" : "bg-purple-soft text-purple-dark"}`}>{id}</button>
           ))}
         </nav>
@@ -171,200 +172,12 @@ export default function AdminApp() {
         {section === "jobs" ? <Jobs jobs={jobs} profiles={profiles} draft={draft} sourceRequest={sourceRequest} onError={setError} onNotice={setNotice} onOpenJob={setSelectedJob} onClear={() => { setDraft(null); setSourceRequest(null); }} onSaved={async (message) => { setDraft(null); setSourceRequest(null); setNotice(message); await load(); }} /> : null}
         {section === "staff" ? <Staff profiles={profiles} jobs={jobs} currentUserId={profile?.id ?? ""} onSaved={load} onError={setError} onNotice={setNotice} /> : null}
         {section === "documents" ? <DocumentsPanel jobs={jobs} requests={requests} /> : null}
+        {section === "gallery" ? <GalleryPanel /> : null}
         {selectedJob ? (
           <JobDetailModal job={selectedJob} isAdmin currentUserId={profile?.id ?? ""} onClose={() => setSelectedJob(null)} onUpdated={load} onDeleted={async () => { setSelectedJob(null); setNotice("Job deleted."); await load(); }} />
         ) : null}
         {showPassword ? <ChangePasswordModal onClose={() => setShowPassword(false)} /> : null}
       </main>
     </div>
-  );
-}
-
-function Jobs({ jobs, profiles, draft, sourceRequest, onClear, onSaved, onError, onNotice, onOpenJob }: { jobs: JobWithAssignments[]; profiles: LisaProfile[]; draft: Partial<JobWithAssignments> | null; sourceRequest: QuoteRequest | null; onClear: () => void; onSaved: (message: string) => Promise<void>; onError: (message: string | null) => void; onNotice: (message: string | null) => void; onOpenJob: (job: JobWithAssignments) => void }) {
-  const [form, setForm] = useState({ ...emptyJobForm, type_of_clean: draft?.type_of_clean || JOB_SERVICE_TYPES[0], customer_name: draft?.customer_name ?? "", customer_phone: draft?.customer_phone ?? "", customer_email: draft?.customer_email ?? "", address: draft?.address ?? "", job_date: draft?.job_date ?? "", notes: draft?.notes ?? "" });
-  useEffect(() => {
-    if (!draft) return;
-    setForm((prev) => ({ ...prev, customer_name: draft.customer_name ?? "", customer_phone: draft.customer_phone ?? "", customer_email: draft.customer_email ?? "", address: draft.address ?? "", type_of_clean: draft.type_of_clean || prev.type_of_clean, job_date: draft.job_date ?? "", notes: draft.notes ?? "" }));
-  }, [draft]);
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    if (form.assignee_ids.length === 0) return onError("Assign at least one person.");
-    const supabase = getSupabaseBrowser();
-    const business_id = process.env.NEXT_PUBLIC_LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
-    const payload = {
-      business_id,
-      customer_name: form.customer_name.trim(),
-      customer_phone: form.customer_phone.trim() || null,
-      customer_email: form.customer_email.trim() || null,
-      address: form.address.trim(),
-      type_of_clean: form.type_of_clean,
-      price: form.price ? Number(form.price) : null,
-      job_date: form.job_date,
-      job_time: form.job_time.length === 5 ? `${form.job_time}:00` : form.job_time,
-      notes: form.notes.trim() || null,
-      status: "scheduled",
-    };
-    const { data, error } = await supabase.from("lisa_jobs").insert(payload).select("id").single();
-    if (error || !data) return onError(error?.message ?? "Could not create job.");
-    const { error: assignError } = await supabase.from("lisa_job_assignments").insert(form.assignee_ids.map((assignee_id) => ({ job_id: data.id, assignee_id, business_id })));
-    if (assignError) return onError(assignError.message);
-    if (sourceRequest?.id) await supabase.from("lisa_quote_requests").update({ status: "booked" }).eq("id", sourceRequest.id);
-    const when = [form.job_date, form.job_time].filter(Boolean).join(" ");
-    setForm({ ...emptyJobForm });
-    onError(null);
-    onNotice(null);
-    await onSaved(`Job saved for ${form.customer_name.trim()}${when ? ` on ${when}` : ""}.`);
-  }
-  return (
-    <section className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <form noValidate onSubmit={save} className="space-y-3 rounded-md bg-white p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-purple-dark">{draft ? "Create job from request" : "New job"}</h2>
-          {draft ? <button type="button" className="text-sm text-purple-mid" onClick={onClear}>Clear</button> : null}
-        </div>
-        <input className={inputCls} required placeholder="Customer name" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
-        <input className={inputCls} placeholder="Phone (optional)" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
-        <input className={inputCls} placeholder="Email (optional)" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} />
-        <input className={inputCls} required placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-        <select className={inputCls} value={form.type_of_clean} onChange={(e) => setForm({ ...form, type_of_clean: e.target.value })}>{JOB_SERVICE_TYPES.map((label) => <option key={label}>{label}</option>)}</select>
-        <input className={inputCls} type="date" required value={form.job_date} onChange={(e) => setForm({ ...form, job_date: e.target.value })} />
-        <input className={inputCls} type="time" required value={form.job_time} onChange={(e) => setForm({ ...form, job_time: e.target.value })} />
-        <input className={inputCls} type="number" min="0" step="0.01" placeholder="Price (admin only)" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-        <textarea className={inputCls} rows={3} placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-        <p className="text-sm font-medium">Assign to</p>
-        {profiles.map((person) => {
-          const checked = form.assignee_ids.includes(person.id);
-          return (
-            <label key={person.id} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={checked} onChange={() => setForm((prev) => ({ ...prev, assignee_ids: checked ? prev.assignee_ids.filter((id) => id !== person.id) : [...prev.assignee_ids, person.id] }))} />
-              {person.full_name} ({person.role})
-            </label>
-          );
-        })}
-        <button type="submit" className="tap w-full rounded-md bg-purple-mid text-sm font-semibold text-white">Save job to calendar</button>
-      </form>
-      <div>
-        <h2 className="font-semibold text-purple-dark">Jobs</h2>
-        <ul className="mt-3 space-y-2">
-          {sortJobsNewestFirst(jobs).map((job) => (
-            <li key={job.id}>
-              <button type="button" className="w-full rounded-md bg-white p-3 text-left text-sm" onClick={() => onOpenJob(job)}>
-                <p className="font-semibold">{job.customer_name} · {job.status}</p>
-                <p>{job.job_date} {jobTimeLabel(job.job_time)} · {job.type_of_clean}</p>
-                <p>{job.address}</p>
-                <p>Price: {job.price != null ? `$${job.price}` : "\u2014"}</p>
-                <p>Assigned: {job.job_assignments?.map((assignment) => assignment.profile?.full_name ?? "Staff").join(", ") || "None"}</p>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-function Staff({ profiles, jobs, currentUserId, onSaved, onError, onNotice }: { profiles: LisaProfile[]; jobs: JobWithAssignments[]; currentUserId: string; onSaved: () => Promise<void>; onError: (message: string | null) => void; onNotice: (message: string | null) => void }) {
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<StaffRole>("staff");
-  const [password, setPassword] = useState("");
-  const [pending, setPending] = useState<LisaProfile | null>(null);
-  const fallback = defaultReassignId(profiles, currentUserId);
-  const [reassignTo, setReassignTo] = useState(fallback);
-  const futureForPending = useMemo(() => {
-    if (!pending) return [];
-    const today = todayIso();
-    return jobs.filter((job) => job.job_date >= today && job.status !== "cancelled" && job.job_assignments.some((row) => row.assignee_id === pending.id));
-  }, [jobs, pending]);
-  async function addPerson(event: FormEvent) {
-    event.preventDefault();
-    const { data: sessionData } = await getSupabaseBrowser().auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    const res = await fetch("/api/staff", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
-      body: JSON.stringify({ email, full_name: fullName, role, password, access_token: accessToken }),
-    });
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) return onError(body.error || "Could not add staff.");
-    setEmail(""); setFullName(""); setPassword(""); onError(null); onNotice(`${fullName} added.`); await onSaved();
-  }
-  async function changeRole(id: string, nextRole: StaffRole) {
-    const { error } = await getSupabaseBrowser().from("lisa_profiles").update({ role: nextRole }).eq("id", id);
-    if (error) onError(error.message); else await onSaved();
-  }
-  async function confirmDelete() {
-    if (!pending) return;
-    const { data: sessionData } = await getSupabaseBrowser().auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    const res = await fetch("/api/staff", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
-      body: JSON.stringify({ id: pending.id, reassign_to: reassignTo, access_token: accessToken }),
-    });
-    const body = (await res.json().catch(() => ({}))) as { error?: string; reassigned?: number };
-    if (!res.ok) return onError(body.error || "Could not delete staff.");
-    onError(null);
-    onNotice(futureForPending.length ? `${pending.full_name} deleted. ${futureForPending.length} future job(s) moved.` : `${pending.full_name} deleted.`);
-    setPending(null);
-    await onSaved();
-  }
-  return (
-    <section>
-      <h1 className="text-2xl font-bold text-purple-dark">Staff</h1>
-      <p className="mt-1 text-sm">Seed admins: {INITIAL_ADMIN_EMAILS.join(" and ")}. Roles can be changed here.</p>
-      <form onSubmit={addPerson} className="mt-4 grid gap-3 rounded-md bg-white p-4 sm:grid-cols-2">
-        <input className={inputCls} required placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        <input className={inputCls} required type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input className={inputCls} required type="password" minLength={6} placeholder="Temporary password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <select className={inputCls} value={role} onChange={(e) => setRole(e.target.value as StaffRole)}><option value="staff">Staff</option><option value="admin">Admin</option></select>
-        <button type="submit" className="tap rounded-md bg-purple-mid px-3 text-sm font-semibold text-white sm:col-span-2">Add person</button>
-      </form>
-      <ul className="mt-4 space-y-2">
-        {profiles.map((person) => (
-          <li key={person.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white p-3 text-sm">
-            <span>{person.full_name} {person.email ? `· ${person.email}` : ""}</span>
-            <div className="flex items-center gap-2">
-              <select className="rounded-md border border-purple-light px-2 py-1" value={person.role} onChange={(e) => changeRole(person.id, e.target.value as StaffRole)}>
-                <option value="admin">admin</option>
-                <option value="staff">staff</option>
-              </select>
-              {person.id !== currentUserId ? (
-                <button type="button" className="tap rounded-md px-2 py-1 text-red-700" onClick={() => { setPending(person); setReassignTo(defaultReassignId(profiles, currentUserId)); }}>Delete</button>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
-      {pending ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5">
-            <h2 className="text-lg font-semibold text-purple-dark">Delete {pending.full_name}?</h2>
-            {futureForPending.length ? (
-              <>
-                <p className="mt-2 text-sm">This person has {futureForPending.length} future job(s). Reassign them before deleting.</p>
-                <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-sm">
-                  {futureForPending.map((job) => (
-                    <li key={job.id}>{job.job_date} {jobTimeLabel(job.job_time)} · {job.customer_name}</li>
-                  ))}
-                </ul>
-                <label className="mt-3 block text-sm font-semibold text-purple-dark" htmlFor="reassign-to">Move jobs to</label>
-                <select id="reassign-to" className={inputCls} value={reassignTo} onChange={(e) => setReassignTo(e.target.value)}>
-                  {profiles.filter((person) => person.id !== pending.id).map((person) => (
-                    <option key={person.id} value={person.id}>{person.full_name} ({person.role})</option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <p className="mt-2 text-sm">No future jobs are assigned to this person.</p>
-            )}
-            <div className="mt-4 flex gap-2">
-              <button type="button" className="tap flex-1 rounded-md bg-gray-100 py-2" onClick={() => setPending(null)}>Cancel</button>
-              <button type="button" className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white" onClick={() => void confirmDelete()}>Delete</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </section>
   );
 }
