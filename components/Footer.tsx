@@ -5,7 +5,7 @@ import { LOCAL_LINE } from "@/lib/publicCopy";
 
 function KeyIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-6 w-6 lg:h-5 lg:w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <circle cx="8" cy="12" r="3.2" />
       <path d="M11 12h9v3M16 12v3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -44,8 +44,12 @@ export default function Footer() {
           </ul>
         </nav>
       </div>
-      <div className="mx-auto flex max-w-6xl justify-end px-4 pb-4">
-        <Link href="/login" className="text-white opacity-20 hover:opacity-60" aria-label="Staff login">
+      <div className="mx-auto flex max-w-6xl justify-end px-4 pb-6">
+        <Link
+          href="/login"
+          className="tap inline-flex items-center justify-center rounded-full bg-white/15 p-2 text-sand hover:bg-white/25 hover:text-white"
+          aria-label="Staff login"
+        >
           <KeyIcon />
         </Link>
       </div>
