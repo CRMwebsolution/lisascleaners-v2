@@ -32,9 +32,12 @@ export default async function HomePage() {
   const hero = siteImageFrom(await loadGalleryItems(), "hero", HERO_IMAGE, HERO_IMAGE_ALT);
   return (
     <main id="main">
-      <section className="grid min-h-[78vh] bg-purple-dark lg:grid-cols-2">
-        <div className="flex flex-col justify-center px-4 py-14 sm:px-8 lg:px-12">
-          <div className="max-w-xl">
+      <section className="grid bg-purple-dark lg:min-h-[78vh] lg:grid-cols-2">
+        <div className="relative flex min-h-[70vh] flex-col justify-center px-4 py-14 sm:px-8 lg:min-h-0 lg:px-12">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={hero.url} alt="" className="absolute inset-0 h-full w-full object-cover object-center lg:hidden" />
+          <div className="absolute inset-0 bg-purple-dark/78 lg:hidden" />
+          <div className="relative z-10 max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sand">{BUSINESS_NAME}</p>
             <HeroHeadline />
             <p className="mt-4 text-lg text-white/90">{HERO_LEDE}</p>
@@ -50,7 +53,7 @@ export default async function HomePage() {
             </ul>
           </div>
         </div>
-        <div className="relative min-h-[280px] bg-purple-soft">
+        <div className="relative hidden min-h-[280px] bg-purple-soft lg:block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={hero.url} alt={hero.alt} className="absolute inset-0 h-full w-full object-cover object-center" />
         </div>

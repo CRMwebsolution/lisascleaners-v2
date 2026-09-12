@@ -16,8 +16,10 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   return (
     <>
       <Header />
-      <div className="pb-20 lg:pb-0">{children}</div>
-      <Footer />
+      <div className="pb-24 lg:pb-0">
+        {children}
+        <Footer />
+      </div>
       <MobileStickyCta />
     </>
   );
