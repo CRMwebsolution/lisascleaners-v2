@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Geist } from "next/font/google";
 import JsonLd from "@/components/JsonLd";
 import SiteChrome from "@/components/SiteChrome";
+import { META_IMAGE, META_IMAGE_ALT } from "@/lib/publicCopy";
 import { BUSINESS_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -29,6 +30,23 @@ export const metadata: Metadata = {
       "Cleaning for homes, offices, and vacation rentals in Newport, Emerald Isle, Atlantic Beach, Morehead City, and nearby towns.",
     type: "website",
     locale: "en_US",
+    url: SITE_URL,
+    siteName: BUSINESS_NAME,
+    images: [
+      {
+        url: META_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: META_IMAGE_ALT,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `Cleaning in Newport and nearby coastal towns | ${BUSINESS_NAME}`,
+    description:
+      "Cleaning for homes, offices, and vacation rentals in Newport and nearby coastal towns.",
+    images: [META_IMAGE],
   },
 };
 

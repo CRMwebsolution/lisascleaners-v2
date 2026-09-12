@@ -1,8 +1,13 @@
 export const HERO_WORDS = ["home", "office", "rental"] as const;
 export const HERO_LEDE = "Trusted local cleaning across Newport and nearby coastal towns.";
 export const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80";
-export const HERO_IMAGE_ALT = "Bright, clean kitchen and living space ready after a visit";
+  "https://rwmpqlnakmexugwihisy.supabase.co/storage/v1/object/public/listing-photos/lisacleaners/hero.jpg";
+export const HERO_IMAGE_ALT =
+  "Coastal waterfront homes at sunset along the Crystal Coast, the kind of beach properties Lisa cleans";
+export const META_IMAGE =
+  "https://rwmpqlnakmexugwihisy.supabase.co/storage/v1/object/public/listing-photos/lisacleaners/meta.jpg";
+export const META_IMAGE_ALT =
+  "Lisa McNamara Cleaning Service — Newport and Carteret County, NC";
 
 export const TRUST_MARKERS = [
   "Locally owned",

@@ -1,3 +1,4 @@
+import { META_IMAGE } from "@/lib/publicCopy";
 import {
   ADDRESS_LOCALITY,
   ADDRESS_POSTAL_CODE,
@@ -16,6 +17,7 @@ export default function JsonLd() {
     "@type": "LocalBusiness",
     name: BUSINESS_NAME,
     url: SITE_URL,
+    image: META_IMAGE,
     telephone: PHONE_TEL,
     email: EMAIL,
     address: {
