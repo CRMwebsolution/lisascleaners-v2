@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { DEFAULT_LISA_BUSINESS_ID } from "@/lib/site";
-import { GALLERY_BUCKET } from "@/lib/gallery";
+import { asGalleryItem, GALLERY_BUCKET } from "@/lib/gallery";
 
 export const runtime = "nodejs";
 
@@ -51,7 +51,7 @@ export async function GET() {
   const supabase = createClient(url, anon);
   const { data, error } = await supabase.from("lisa_gallery_items").select("*").order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message, items: [] }, { status: 400 });
-  return NextResponse.json({ items: data ?? [] });
+  return NextResponse.json({ items: (data ?? []).map((row) => asGalleryItem(row as Record<string, unknown>)) });
 }
 
 export async function POST(request: Request) {
@@ -78,10 +78,10 @@ export async function POST(request: Request) {
   const businessId = process.env.LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID;
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const folder = kind === "site" ? `site/${siteKey}` : "gallery";
-  const path = `${folder}/${stamp}.${extOf(image)}`;
+  const storagePath = `${folder}/${stamp}.${extOf(image)}`;
   const afterPath = kind === "before_after" && after instanceof File ? `${folder}/${stamp}-after.${extOf(after)}` : null;
 
-  const uploadError = await uploadFile(admin, image, path);
+  const uploadError = await uploadFile(admin, image, storagePath);
   if (uploadError) return NextResponse.json({ error: `Upload failed: ${uploadError}. Check the bucket name and that it is public.` }, { status: 400 });
   if (after instanceof File && afterPath) {
     const afterError = await uploadFile(admin, after, afterPath);
@@ -94,23 +94,16 @@ export async function POST(request: Request) {
 
   const row = {
     business_id: businessId,
-    path,
-    alt: alt || (kind === "site" ? `${siteKey} photo` : "Cleaning job photo"),
+    storage_path: storagePath,
+    alt_text: alt || (kind === "site" ? `${siteKey} photo` : "Cleaning job photo"),
     kind,
     site_key: kind === "site" ? siteKey : null,
     after_path: afterPath,
     caption,
   };
-  let insert = await admin.from("lisa_gallery_items").insert(row as never).select("*").single();
-  if (insert.error) {
-    insert = await admin.from("lisa_gallery_items").insert({
-      business_id: businessId,
-      path,
-      alt: row.alt,
-    } as never).select("*").single();
-  }
+  const insert = await admin.from("lisa_gallery_items").insert(row as never).select("*").single();
   if (insert.error) return NextResponse.json({ error: insert.error.message }, { status: 400 });
-  return NextResponse.json({ ok: true, item: insert.data });
+  return NextResponse.json({ ok: true, item: asGalleryItem((insert.data ?? {}) as Record<string, unknown>) });
 }
 
 export async function DELETE(request: Request) {
@@ -120,8 +113,8 @@ export async function DELETE(request: Request) {
   const body = (await request.json().catch(() => null)) as { id?: string } | null;
   if (!body?.id) return NextResponse.json({ error: "Photo id is required." }, { status: 400 });
   const { data } = await admin.from("lisa_gallery_items").select("*").eq("id", body.id).maybeSingle();
-  const row = data as { path?: string; after_path?: string } | null;
-  const paths = [row?.path, row?.after_path].filter(Boolean) as string[];
+  const row = data as { storage_path?: string; path?: string; after_path?: string } | null;
+  const paths = [row?.storage_path, row?.path, row?.after_path].filter(Boolean) as string[];
   if (paths.length) await admin.storage.from(GALLERY_BUCKET).remove(paths);
   const removed = await admin.from("lisa_gallery_items").delete().eq("id", body.id);
   if (removed.error) return NextResponse.json({ error: removed.error.message }, { status: 400 });

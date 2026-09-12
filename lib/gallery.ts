@@ -32,15 +32,15 @@ export function publicObjectUrl(path: string | null | undefined) {
   return `${base}/storage/v1/object/public/${GALLERY_BUCKET}/${path.replace(/^\/+/, "")}`;
 }
 
-function asItem(row: Record<string, unknown>): GalleryItem {
+export function asGalleryItem(row: Record<string, unknown>): GalleryItem {
   return {
     id: String(row.id ?? ""),
     business_id: String(row.business_id ?? ""),
     kind: (row.kind as GalleryKind) || (row.site_key ? "site" : row.after_path ? "before_after" : "single"),
     site_key: (row.site_key as string | null) ?? null,
-    path: String(row.path ?? ""),
+    path: String(row.storage_path ?? row.path ?? ""),
     after_path: (row.after_path as string | null) ?? null,
-    alt: String(row.alt ?? ""),
+    alt: String(row.alt_text ?? row.alt ?? ""),
     caption: (row.caption as string | null) ?? null,
     created_at: String(row.created_at ?? ""),
   };
@@ -70,7 +70,7 @@ export async function loadGalleryItems() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error || !data?.length) return error ? fallbackGalleryItems() : [];
-  return data.map((row) => asItem(row as Record<string, unknown>));
+  return data.map((row) => asGalleryItem(row as Record<string, unknown>));
 }
 
 export function galleryDisplayItems(items: GalleryItem[]) {
