@@ -20,13 +20,16 @@ export default function QuoteRequestsPanel({
   requests,
   onCreate,
   onStatus,
+  onDelete,
 }: {
   requests: QuoteRequest[];
   onCreate: (req: QuoteRequest) => void;
   onStatus: (id: string, status: RequestStatus, reason?: string) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
 }) {
   const [decliningId, setDecliningId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<QuoteRequest | null>(null);
 
   function startDecline(req: QuoteRequest) {
     setDecliningId(req.id);
@@ -82,6 +85,9 @@ export default function QuoteRequestsPanel({
                 >
                   declined
                 </button>
+                {onDelete ? (
+                  <button type="button" className="tap rounded-md px-3 text-sm text-red-700" onClick={() => setPendingDelete(req)}>Delete</button>
+                ) : null}
               </div>
               {isDeclining ? (
                 <div className="mt-3 rounded-md border border-purple-light p-3">
@@ -104,6 +110,29 @@ export default function QuoteRequestsPanel({
           );
         })}
       </ul>
+      {pendingDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5">
+            <h2 className="text-lg font-semibold text-purple-dark">Delete this request?</h2>
+            <p className="mt-2 text-sm">{pendingDelete.name}{pendingDelete.preferred_date ? ` · ${pendingDelete.preferred_date}` : ""}</p>
+            <p className="mt-1 text-sm text-gray-600">This removes the quote request. It does not delete a job if one was already created.</p>
+            <div className="mt-4 flex gap-2">
+              <button type="button" className="tap flex-1 rounded-md bg-gray-100 py-2" onClick={() => setPendingDelete(null)}>Keep request</button>
+              <button
+                type="button"
+                className="tap flex-1 rounded-md bg-red-700 py-2 font-semibold text-white"
+                onClick={() => {
+                  const id = pendingDelete.id;
+                  setPendingDelete(null);
+                  void onDelete?.(id);
+                }}
+              >
+                Delete request
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
