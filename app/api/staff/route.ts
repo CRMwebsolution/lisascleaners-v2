@@ -88,12 +88,10 @@ export async function POST(request: Request) {
     role?: "admin" | "staff";
     access_token?: string;
   } | null;
-  if (!body?.email || !body.full_name || !body.role) {
-    return NextResponse.json({ error: "Name, email, and role are required." }, { status: 400 });
+  if (!body?.email || !body.full_name) {
+    return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
   }
-  if (!["admin", "staff"].includes(body.role)) {
-    return NextResponse.json({ error: "Role must be admin or staff." }, { status: 400 });
-  }
+  const role: "admin" | "staff" = "staff";
   const gate = await requireAdmin(request, body.access_token);
   if ("error" in gate && gate.error) return gate.error;
   const admin = gate.admin!;
@@ -109,7 +107,7 @@ export async function POST(request: Request) {
       email,
       password: body.password,
       email_confirm: true,
-      user_metadata: { full_name: body.full_name.trim(), role: body.role },
+      user_metadata: { full_name: body.full_name.trim(), role },
     });
     if (created.data.user) user = created.data.user;
     else if (/already|registered|exists|duplicate/i.test(created.error?.message ?? "")) {
@@ -123,7 +121,7 @@ export async function POST(request: Request) {
 
   const updates: { email_confirm: true; user_metadata: Record<string, string>; password?: string } = {
     email_confirm: true,
-    user_metadata: { full_name: body.full_name.trim(), role: body.role },
+    user_metadata: { full_name: body.full_name.trim(), role },
   };
   if (!reused && body.password) updates.password = body.password;
   await admin.auth.admin.updateUserById(user.id, updates);
@@ -132,7 +130,7 @@ export async function POST(request: Request) {
     id: user.id,
     business_id: process.env.LISA_BUSINESS_ID || DEFAULT_LISA_BUSINESS_ID,
     full_name: body.full_name.trim(),
-    role: body.role,
+    role,
     email,
   });
   if (profileError) return NextResponse.json({ error: profileError }, { status: 400 });
