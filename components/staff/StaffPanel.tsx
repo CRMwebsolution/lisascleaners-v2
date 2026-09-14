@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { INITIAL_ADMIN_EMAILS } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import type { JobWithAssignments, LisaProfile, StaffRole } from "@/lib/types";
 
@@ -102,7 +101,6 @@ export default function Staff({
   return (
     <section>
       <h1 className="text-2xl font-bold text-purple-dark">Staff</h1>
-      <p className="mt-1 text-sm">Seed admins: {INITIAL_ADMIN_EMAILS.join(" and ")}. New people are added as staff.</p>
       <form onSubmit={addPerson} className="mt-4 grid gap-3 rounded-md bg-white p-4 sm:grid-cols-2">
         <input className={inputCls} required placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         <input className={inputCls} required type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
